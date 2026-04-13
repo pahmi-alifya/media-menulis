@@ -5,7 +5,11 @@
       "Read(//Users/pahmi_alifya/vibe/**)",
       "Bash(mv media-menulis/CLAUDE.md .)",
       "Bash(mv media-menulis/PLANNING.md .)",
-      "Bash(npx create-next-app@latest media-menulis --typescript --tailwind --app --src-dir --import-alias \"@/*\" --no-eslint --yes)"
+      "Bash(npx create-next-app@latest media-menulis --typescript --tailwind --app --src-dir --import-alias \"@/*\" --no-eslint --yes)",
+      "Bash(mv /Users/pahmi_alifya/vibe/CLAUDE.md /Users/pahmi_alifya/vibe/media-menulis/CLAUDE.md)",
+      "Bash(mv /Users/pahmi_alifya/vibe/PLANNING.md /Users/pahmi_alifya/vibe/media-menulis/PLANNING.md)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest init --defaults)"
     ]
   }
 }
