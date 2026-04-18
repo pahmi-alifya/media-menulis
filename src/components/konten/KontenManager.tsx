@@ -11,6 +11,7 @@ import {
   ChevronRight,
   ChevronUp,
   ChevronDown,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import RichTextEditor from "@/components/konten/RichTextEditor";
 import {
   AlertDialog,
@@ -38,10 +40,257 @@ import {
 import KontenCard from "@/components/konten/KontenCard";
 import {
   type MockKonten,
+  type MockPesan,
   type KontenTipe,
   type KategoriKonten,
+  type Role,
   KATEGORI_LABEL,
+  mockPesanList,
 } from "@/lib/mock/data";
+
+// ─── Forum diskusi inline (hanya untuk dosen, materi BERKONTRIBUSI) ───────────
+
+function DosenForumSection({
+  kontenId,
+  pesanList,
+}: {
+  kontenId: string;
+  pesanList: MockPesan[];
+}) {
+  const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [input, setInput] = useState("");
+  const [localPesan, setLocalPesan] = useState<MockPesan[]>(pesanList);
+
+  const topLevel = localPesan.filter((p) => !p.replyToId);
+
+  function doKirim(replyToId: string | null) {
+    if (!input.trim()) return;
+    const now = new Date().toLocaleString("id-ID", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    if (replyToId) {
+      setLocalPesan((prev) =>
+        prev.map((p) =>
+          p.id === replyToId
+            ? {
+                ...p,
+                replies: [
+                  ...(p.replies ?? []),
+                  {
+                    id: `r-${Date.now()}`,
+                    forumId: `f-${kontenId}`,
+                    userId: "u1",
+                    namaPengirim: "Dosen",
+                    rolePengirim: "DOSEN" as Role,
+                    isi: input,
+                    createdAt: now,
+                    replyToId,
+                  },
+                ],
+              }
+            : p,
+        ),
+      );
+    } else {
+      setLocalPesan((prev) => [
+        ...prev,
+        {
+          id: `m-${Date.now()}`,
+          forumId: `f-${kontenId}`,
+          userId: "u1",
+          namaPengirim: "Dosen",
+          rolePengirim: "DOSEN" as Role,
+          isi: input,
+          createdAt: now,
+          replyToId: null,
+        },
+      ]);
+    }
+    setInput("");
+    setReplyTo(null);
+    // TODO: Server Action — createPesan()
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <MessageSquare className="h-4 w-4 text-muted-foreground" />
+        <h3 className="font-semibold text-sm">Forum Diskusi</h3>
+        <Badge variant="secondary" className="text-xs">
+          {topLevel.length}
+        </Badge>
+      </div>
+
+      {/* Daftar pesan */}
+      <div className="space-y-4">
+        {topLevel.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            Belum ada diskusi dari mahasiswa.
+          </p>
+        )}
+        {topLevel.map((pesan) => {
+          const initials = pesan.namaPengirim
+            .split(" ")
+            .slice(0, 2)
+            .map((n) => n[0])
+            .join("")
+            .toUpperCase();
+          const replies = pesan.replies ?? [];
+
+          return (
+            <div key={pesan.id}>
+              <div className="flex gap-3">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                    pesan.rolePengirim === "DOSEN"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {initials}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="text-sm font-medium">
+                      {pesan.namaPengirim}
+                    </span>
+                    {pesan.rolePengirim === "DOSEN" && (
+                      <Badge variant="secondary" className="text-xs py-0">
+                        Dosen
+                      </Badge>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {pesan.createdAt}
+                    </span>
+                  </div>
+                  <div
+                    className="rich-editor-content text-sm"
+                    dangerouslySetInnerHTML={{ __html: pesan.isi }}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs mt-1 gap-1 text-muted-foreground hover:text-foreground -ml-2"
+                    onClick={() =>
+                      setReplyTo(replyTo === pesan.id ? null : pesan.id)
+                    }
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    {replyTo === pesan.id ? "Batal" : "Balas"}
+                  </Button>
+
+                  {/* Inline reply editor */}
+                  {replyTo === pesan.id && (
+                    <div className="mt-2 space-y-2">
+                      <RichTextEditor
+                        value={input}
+                        onChange={setInput}
+                        placeholder={`Balas ke ${pesan.namaPengirim}...`}
+                        minHeight="80px"
+                      />
+                      <Button
+                        size="sm"
+                        className="gap-1.5"
+                        disabled={!input.trim()}
+                        onClick={() => doKirim(pesan.id)}
+                      >
+                        Kirim Balasan
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Nested replies */}
+                  {replies.length > 0 && (
+                    <div className="mt-3 ml-2 space-y-3 border-l-2 border-muted pl-4">
+                      {replies.map((reply) => {
+                        const rInitials = reply.namaPengirim
+                          .split(" ")
+                          .slice(0, 2)
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase();
+                        return (
+                          <div key={reply.id} className="flex gap-3">
+                            <div
+                              className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                                reply.rolePengirim === "DOSEN"
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {rInitials}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                                <span className="text-sm font-medium">
+                                  {reply.namaPengirim}
+                                </span>
+                                {reply.rolePengirim === "DOSEN" && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs py-0"
+                                  >
+                                    Dosen
+                                  </Badge>
+                                )}
+                                <span className="text-xs text-muted-foreground">
+                                  {reply.createdAt}
+                                </span>
+                              </div>
+                              <div
+                                className="rich-editor-content text-sm"
+                                dangerouslySetInnerHTML={{ __html: reply.isi }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Input komentar baru (sembunyikan jika sedang reply) */}
+      {!replyTo && (
+        <>
+          <Separator />
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground font-medium">
+              Tulis komentar
+            </p>
+            <RichTextEditor
+              value={input}
+              onChange={setInput}
+              placeholder="Tulis komentar atau tanggapan kepada mahasiswa..."
+              minHeight="100px"
+            />
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                className="gap-1.5"
+                disabled={!input.trim()}
+                onClick={() => doKirim(null)}
+              >
+                Kirim
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── KontenManager ────────────────────────────────────────────────────────────
 
 interface KontenManagerProps {
   initialKonten: MockKonten[];
@@ -56,6 +305,13 @@ type FormState = {
   url: string;
   body: string;
   pertemuanKe: number;
+};
+
+// Peta tahapId → forumId pada mock data
+const TAHAP_FORUM_ID: Record<string, string> = {
+  t2: "f-t2",
+  t3: "f-t3",
+  t4: "f1",
 };
 
 export default function KontenManager({
@@ -89,6 +345,30 @@ export default function KontenManager({
   const current = sorted[Math.min(previewIndex, sorted.length - 1)];
   const hasPrev = previewIndex > 0;
   const hasNext = previewIndex < sorted.length - 1;
+
+  // Harus dideklarasikan sebelum previewKonten agar tidak masuk temporal dead zone
+  const isEditing = editingId !== null;
+
+  // Live preview: saat mengedit item yang sedang ditampilkan, gabungkan state form
+  const previewKonten: MockKonten | undefined = (() => {
+    if (!current) return undefined;
+    if (isEditing && editingId === current.id) {
+      return {
+        ...current,
+        tipe: form.tipe,
+        kategori: form.kategori,
+        judul: form.judul.trim() || current.judul,
+        url: form.tipe !== "TEKS" ? form.url || null : null,
+        body: form.tipe === "TEKS" ? form.body || null : null,
+        pertemuanKe: form.pertemuanKe,
+      };
+    }
+    return current;
+  })();
+
+  // Pesan forum yang relevan untuk tahap ini (berdasarkan mock forumId)
+  const forumId = TAHAP_FORUM_ID[tahapId] ?? `f-${tahapId}`;
+  const tahapPesanList = mockPesanList.filter((p) => p.forumId === forumId);
 
   // ── Edit ────────────────────────────────────────────────────────────────────
   function startEdit(konten: MockKonten) {
@@ -146,7 +426,7 @@ export default function KontenManager({
   }
 
   // ── Add ─────────────────────────────────────────────────────────────────────
-  function handleAdd(e: React.FormEvent) {
+  function handleAdd(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!form.judul.trim()) return;
     const newId = `c-${Date.now()}`;
@@ -190,8 +470,8 @@ export default function KontenManager({
     // TODO: replace with Server Action — reorderKonten(ids[])
   }
 
-  const isEditing = editingId !== null;
   const deletingItem = items.find((k) => k.id === deleteId);
+  const isLivePreview = isEditing && editingId === current?.id;
 
   const kategoriColor: Record<KategoriKonten, string> = {
     LIHAT: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
@@ -217,31 +497,31 @@ export default function KontenManager({
             </Card>
           ) : (
             <>
+              {/* Indikator live preview */}
+              {isLivePreview && (
+                <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  Preview langsung — perubahan belum disimpan
+                </div>
+              )}
+
               {/* KontenCard satu item */}
               <div className="relative">
-                {/* Edit / Delete overlay */}
-                {/* <div className="absolute top-2 right-2 z-10 flex gap-1">
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => startEdit(current)}
-                    title="Edit materi"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-7 w-7 text-destructive hover:text-destructive"
-                    onClick={() => setDeleteId(current.id)}
-                    title="Hapus materi"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div> */}
-                <KontenCard konten={current} />
+                <KontenCard konten={previewKonten!} />
               </div>
+
+              {/* Forum diskusi — hanya untuk materi BERKONTRIBUSI */}
+              {previewKonten?.kategori === "BERKONTRIBUSI" && (
+                <Card>
+                  <CardContent className="pt-5 pb-5">
+                    <DosenForumSection
+                      key={previewKonten.id}
+                      kontenId={previewKonten.id}
+                      pesanList={tahapPesanList}
+                    />
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Dot navigator */}
               <div className="flex items-center justify-center gap-1.5 flex-wrap pt-1">

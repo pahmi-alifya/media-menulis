@@ -1,0 +1,214 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  DOSEN
+  MAHASISWA
+}
+
+enum TahapKode {
+  SMKM
+  EPM
+  KMBM
+  IMMM
+  IMTM
+}
+
+enum KontenTipe {
+  TEKS
+  VIDEO
+  INFOGRAFIS
+  DOKUMEN
+  TEMPLATE
+}
+
+enum KategoriKonten {
+  LIHAT
+  SERAHKAN
+  BERKONTRIBUSI
+}
+
+enum TipeSubmisi {
+  TEKS_LANGSUNG
+  LINK_DOKUMEN
+  LINK_VIDEO
+  LINK_SLIDE
+  CAMPURAN
+}
+
+enum AspekNilai {
+  ISI_KONTEN
+  ORGANISASI
+  KOSAKATA
+  KEBAHASAAN
+  MEKANIK
+}
+
+enum AspekKolaborasi {
+  MENULIS_KOLABORASI
+  UMPAN_BALIK_KOLABORASI
+}
+
+enum ForumTipe {
+  KELAS
+  KELOMPOK
+}
+
+model User {
+  id                 String       @id @default(cuid())
+  nama               String
+  email              String       @unique
+  password           String
+  role               Role
+  nim                String?
+  createdAt          DateTime     @default(now())
+  kelasDiajar        Kelas[]
+  enrollments        Enrollment[]
+  submissions        Submission[]
+  pesanForum         PesanForum[]
+  peerReviewDiberi   PeerReview[] @relation("reviewer")
+  peerReviewDiterima PeerReview[] @relation("reviewee")
+}
+
+model Kelas {
+  id          String       @id @default(cuid())
+  nama        String
+  deskripsi   String?
+  kode        String       @unique
+  dosenId     String
+  dosen       User         @relation(fields: [dosenId], references: [id])
+  createdAt   DateTime     @default(now())
+  tahaps      Tahap[]
+  enrollments Enrollment[]
+  forums      Forum[]
+}
+
+model Tahap {
+  id          String       @id @default(cuid())
+  kelasId     String
+  kelas       Kelas        @relation(fields: [kelasId], references: [id])
+  urutan      Int
+  kode        TahapKode
+  tipeSubmisi TipeSubmisi
+  isUnlocked  Boolean      @default(false)
+  unlockedAt  DateTime?
+  konten      Konten[]
+  submissions Submission[]
+  forums      Forum[]      @relation("TahapForums")
+
+  @@unique([kelasId, urutan])
+  @@unique([kelasId, kode])
+}
+
+model Konten {
+  id          String         @id @default(cuid())
+  tahapId     String
+  tahap       Tahap          @relation(fields: [tahapId], references: [id])
+  tipe        KontenTipe
+  judul       String
+  body        String?
+  url         String?
+  urutan      Int
+  pertemuanKe Int            @default(1)
+  kategori    KategoriKonten @default(LIHAT)
+}
+
+model Enrollment {
+  id            String   @id @default(cuid())
+  kelasId       String
+  kelas         Kelas    @relation(fields: [kelasId], references: [id])
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  nim           String?
+  joinedAt      DateTime @default(now())
+  kelompok      String?
+
+  @@unique([kelasId, userId])
+}
+
+model Submission {
+  id          String       @id @default(cuid())
+  tahapId     String
+  tahap       Tahap        @relation(fields: [tahapId], references: [id])
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  isDraft     Boolean      @default(true)
+  submittedAt DateTime?
+  isiEsai     String?
+  linkSubmisi String?
+  nilaiTotal  Float?
+  nilaiAspeks NilaiAspek[]
+  nilaiKolabs NilaiKolaborasi[]
+  peerReviews PeerReview[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([tahapId, userId])
+}
+
+model NilaiAspek {
+  id           String     @id @default(cuid())
+  submissionId String
+  submission   Submission @relation(fields: [submissionId], references: [id])
+  aspek        AspekNilai
+  skor         Int
+  komentar     String?
+
+  @@unique([submissionId, aspek])
+}
+
+model NilaiKolaborasi {
+  id           String          @id @default(cuid())
+  submissionId String
+  submission   Submission      @relation(fields: [submissionId], references: [id])
+  aspek        AspekKolaborasi
+  skor         Int
+  komentar     String?
+
+  @@unique([submissionId, aspek])
+}
+
+model PeerReview {
+  id           String     @id @default(cuid())
+  submissionId String
+  submission   Submission @relation(fields: [submissionId], references: [id])
+  reviewerId   String
+  reviewer     User       @relation("reviewer", fields: [reviewerId], references: [id])
+  revieweeId   String
+  reviewee     User       @relation("reviewee", fields: [revieweeId], references: [id])
+  komentar     String?
+  createdAt    DateTime   @default(now())
+}
+
+model Forum {
+  id           String       @id @default(cuid())
+  kelasId      String
+  kelas        Kelas        @relation(fields: [kelasId], references: [id])
+  tahapId      String?
+  tahap        Tahap?       @relation("TahapForums", fields: [tahapId], references: [id])
+  kontenId     String?
+  tipe         ForumTipe    @default(KELAS)
+  namaKelompok String?
+  pesans       PesanForum[]
+}
+
+model PesanForum {
+  id        String       @id @default(cuid())
+  forumId   String
+  forum     Forum        @relation(fields: [forumId], references: [id])
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  isi       String
+  replyToId String?
+  replyTo   PesanForum?  @relation("Replies", fields: [replyToId], references: [id])
+  replies   PesanForum[] @relation("Replies")
+  createdAt DateTime     @default(now())
+}

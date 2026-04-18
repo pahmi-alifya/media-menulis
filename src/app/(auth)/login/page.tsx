@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { GraduationCap } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import LoginForm from "@/components/auth/LoginForm";
 
 export default function LoginPage() {
   return (
@@ -73,38 +71,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form className="space-y-5">
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-sm font-medium">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="nama@email.com"
-                autoComplete="email"
-                className="h-10"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-sm font-medium">
-                  Kata Sandi
-                </Label>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                autoComplete="current-password"
-                className="h-10"
-              />
-            </div>
-            {/* TODO: replace with Server Action — signIn() NextAuth */}
-            <Button type="submit" className="w-full h-10">
-              Masuk
-            </Button>
-          </form>
+          <LoginForm />
 
           <p className="text-center text-sm text-muted-foreground">
             Mahasiswa belum punya akun?{" "}

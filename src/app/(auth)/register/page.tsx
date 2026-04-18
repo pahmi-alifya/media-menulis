@@ -1,8 +1,6 @@
 import Link from "next/link"
 import { GraduationCap } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import RegisterForm from "@/components/auth/RegisterForm"
 
 export default function RegisterPage() {
   return (
@@ -18,35 +16,7 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <form className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="nama">Nama Lengkap</Label>
-            <Input id="nama" placeholder="Nama sesuai identitas" className="h-10" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="nim">
-              NIM
-              <span className="text-muted-foreground font-normal ml-1 text-xs">(opsional)</span>
-            </Label>
-            <Input id="nim" placeholder="Nomor Induk Mahasiswa" className="h-10" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="nama@email.com" className="h-10" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="password">Kata Sandi</Label>
-            <Input id="password" type="password" placeholder="Minimal 8 karakter" className="h-10" autoComplete="new-password" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="confirmPassword">Konfirmasi Kata Sandi</Label>
-            <Input id="confirmPassword" type="password" placeholder="Ulangi kata sandi" className="h-10" autoComplete="new-password" />
-          </div>
-          {/* TODO: replace with Server Action — registerMahasiswa() */}
-          <Button type="submit" className="w-full h-10">
-            Buat Akun
-          </Button>
-        </form>
+        <RegisterForm />
 
         <div className="space-y-3 text-center">
           <p className="text-sm text-muted-foreground">
