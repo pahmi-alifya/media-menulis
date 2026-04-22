@@ -1,12 +1,12 @@
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
+import { notFound } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import KontenManager from "@/components/konten/KontenManager"
-import { mockTahapList, mockKontenList, mockSubmissionList, TAHAP_LABEL, TIPE_SUBMISI_LABEL } from "@/lib/mock/data"
-
-// TODO: replace with real API
-const tahapList = mockTahapList.filter((t) => t.kelasId === "k1")
+import { getTahapById, getKontenByTahap } from "@/server/queries/kelas.queries"
+import { TAHAP_LABEL, TIPE_SUBMISI_LABEL } from "@/lib/mock/data"
+import { prisma } from "@/lib/prisma"
 
 export default async function DosenTahapDetailPage({
   params,
@@ -16,9 +16,13 @@ export default async function DosenTahapDetailPage({
   const { pertemuanKe, tahapId } = await params
   const p = Number(pertemuanKe)
 
-  const tahap = tahapList.find((t) => t.id === tahapId) ?? tahapList[0]
-  const initialKonten = mockKontenList.filter((k) => k.tahapId === tahap.id)
-  const submissions = mockSubmissionList.filter((s) => s.tahapId === tahap.id)
+  const tahap = await getTahapById(tahapId)
+  if (!tahap) notFound()
+
+  const [initialKonten, submissionCount] = await Promise.all([
+    getKontenByTahap(tahapId, p),
+    prisma.submission.count({ where: { tahapId, isDraft: false } }),
+  ])
 
   return (
     <div className="p-6 space-y-6">
@@ -31,15 +35,15 @@ export default async function DosenTahapDetailPage({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-bold">
-              Tahap {tahap.urutan}: {TAHAP_LABEL[tahap.kode].singkat}
+              Tahap {tahap.urutan}: {TAHAP_LABEL[tahap.kode as keyof typeof TAHAP_LABEL].singkat}
             </h1>
-            <Badge variant="secondary">{TIPE_SUBMISI_LABEL[tahap.tipeSubmisi]}</Badge>
+            <Badge variant="secondary">{TIPE_SUBMISI_LABEL[tahap.tipeSubmisi as keyof typeof TIPE_SUBMISI_LABEL]}</Badge>
           </div>
           <p className="text-muted-foreground text-sm">Pertemuan {p}</p>
         </div>
         <Link href={`/dosen/pertemuan/${p}/tahap/${tahap.id}/submissions`}>
           <Button variant="outline" size="sm">
-            Submissions ({submissions.length})
+            Submissions ({submissionCount})
           </Button>
         </Link>
       </div>

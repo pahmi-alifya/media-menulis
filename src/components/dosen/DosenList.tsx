@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import { Search, Copy, KeyRound, ChevronLeft, ChevronRight, Check, Plus, Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,44 +26,45 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { type MockUser } from "@/lib/mock/data"
+import {
+  createDosenAction,
+  updateDosenAction,
+  deleteDosenAction,
+  resetDosenPasswordAction,
+} from "@/server/actions/admin.actions"
+
+type DosenRow = { id: string; nama: string; email: string; role: string }
 
 const PAGE_SIZE = 5
 
-function generatePassword(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$"
-  return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("")
-}
-
 interface DosenListProps {
-  initialList: MockUser[]
+  initialList: DosenRow[]
 }
 
 export default function DosenList({ initialList }: DosenListProps) {
-  const [dosenList, setDosenList] = useState<MockUser[]>(initialList)
+  const router = useRouter()
+  const [dosenList, setDosenList] = useState<DosenRow[]>(initialList)
   const [query, setQuery] = useState("")
   const [page, setPage] = useState(1)
+  const [isPending, startTransition] = useTransition()
 
-  // Tambah
   const [addForm, setAddForm] = useState({ nama: "", email: "" })
   const [newEntry, setNewEntry] = useState<{ nama: string; password: string } | null>(null)
 
-  // Edit
-  const [editTarget, setEditTarget] = useState<MockUser | null>(null)
+  const [editTarget, setEditTarget] = useState<DosenRow | null>(null)
   const [editForm, setEditForm] = useState({ nama: "", email: "" })
 
-  // Delete
-  const [deleteTarget, setDeleteTarget] = useState<MockUser | null>(null)
-
-  // Reset sandi
-  const [resetTarget, setResetTarget] = useState<MockUser | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<DosenRow | null>(null)
+  const [resetTarget, setResetTarget] = useState<DosenRow | null>(null)
   const [newPassword, setNewPassword] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+
+  useEffect(() => { setDosenList(initialList) }, [initialList])
 
   const filtered = dosenList.filter(
     (d) =>
       d.nama.toLowerCase().includes(query.toLowerCase()) ||
-      d.email.toLowerCase().includes(query.toLowerCase())
+      d.email.toLowerCase().includes(query.toLowerCase()),
   )
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
@@ -70,42 +72,54 @@ export default function DosenList({ initialList }: DosenListProps) {
 
   function handleQueryChange(val: string) { setQuery(val); setPage(1) }
 
-  function handleAdd(e: React.FormEvent) {
+  function handleAdd(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!addForm.nama.trim() || !addForm.email.trim()) return
-    const pwd = generatePassword()
-    setDosenList((prev) => [...prev, { id: `ud${Date.now()}`, nama: addForm.nama.trim(), email: addForm.email.trim(), role: "DOSEN" }])
-    setNewEntry({ nama: addForm.nama.trim(), password: pwd })
-    setAddForm({ nama: "", email: "" })
-    // TODO: replace with Server Action — createDosenAccount(nama, email, password)
+    startTransition(async () => {
+      const result = await createDosenAction({ nama: addForm.nama, email: addForm.email })
+      if (result.error) { toast.error(result.error); return }
+      setNewEntry({ nama: addForm.nama.trim(), password: result.data!.password })
+      setAddForm({ nama: "", email: "" })
+      router.refresh()
+    })
   }
 
-  function openEdit(d: MockUser) { setEditTarget(d); setEditForm({ nama: d.nama, email: d.email }) }
+  function openEdit(d: DosenRow) { setEditTarget(d); setEditForm({ nama: d.nama, email: d.email }) }
 
   function handleEditSave() {
     if (!editTarget) return
-    setDosenList((prev) =>
-      prev.map((d) => d.id === editTarget.id ? { ...d, nama: editForm.nama.trim(), email: editForm.email.trim() } : d)
-    )
-    setEditTarget(null)
-    toast.success("Data dosen diperbarui.")
-    // TODO: replace with Server Action — updateDosenAccount(id, { nama, email })
+    startTransition(async () => {
+      const result = await updateDosenAction({ id: editTarget.id, nama: editForm.nama, email: editForm.email })
+      if (result.error) { toast.error(result.error); return }
+      setDosenList((prev) =>
+        prev.map((d) => d.id === editTarget.id ? { ...d, nama: editForm.nama.trim(), email: editForm.email.trim() } : d),
+      )
+      setEditTarget(null)
+      toast.success("Data dosen diperbarui.")
+      router.refresh()
+    })
   }
 
   function handleDelete() {
     if (!deleteTarget) return
-    setDosenList((prev) => prev.filter((d) => d.id !== deleteTarget.id))
-    setDeleteTarget(null)
-    toast.success(`Akun ${deleteTarget.nama} dihapus.`)
-    // TODO: replace with Server Action — deleteDosenAccount(id)
+    startTransition(async () => {
+      const result = await deleteDosenAction(deleteTarget.id)
+      if (result.error) { toast.error(result.error); return }
+      setDosenList((prev) => prev.filter((d) => d.id !== deleteTarget.id))
+      setDeleteTarget(null)
+      toast.success(`Akun ${deleteTarget.nama} dihapus.`)
+      router.refresh()
+    })
   }
 
   function handleConfirmReset() {
     if (!resetTarget) return
-    const pwd = generatePassword()
-    setNewPassword(pwd)
-    setResetTarget(null)
-    // TODO: replace with Server Action — resetPassword(userId, newPassword)
+    startTransition(async () => {
+      const result = await resetDosenPasswordAction(resetTarget.id)
+      if (result.error) { toast.error(result.error); return }
+      setNewPassword(result.data!.password)
+      setResetTarget(null)
+    })
   }
 
   function handleCopy(text: string) {
@@ -135,26 +149,23 @@ export default function DosenList({ initialList }: DosenListProps) {
                 <Input id="email-dosen" type="email" placeholder="dosen@unj.ac.id" value={addForm.email} onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))} />
               </div>
             </div>
-            <Button type="submit" disabled={!addForm.nama.trim() || !addForm.email.trim()} className="gap-2">
-              <Plus className="h-4 w-4" />Tambahkan
+            <Button type="submit" disabled={!addForm.nama.trim() || !addForm.email.trim() || isPending} className="gap-2">
+              <Plus className="h-4 w-4" />{isPending ? "Menambahkan..." : "Tambahkan"}
             </Button>
           </form>
 
           {newEntry && (
             <div className="mt-4 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md">
               <p className="text-sm font-medium text-green-800 dark:text-green-300">Akun dosen berhasil dibuat!</p>
-              <p className="text-sm text-green-700 dark:text-green-400 mt-1">
-                Kata sandi sementara untuk <strong>{newEntry.nama}</strong>:
-              </p>
+              <p className="text-sm text-green-700 dark:text-green-400 mt-1">Kata sandi sementara untuk <strong>{newEntry.nama}</strong>:</p>
               <div className="flex items-center gap-2 mt-2">
-                <code className="bg-white dark:bg-black/20 border px-3 py-1.5 rounded text-sm font-mono tracking-widest">
-                  {newEntry.password}
-                </code>
+                <code className="bg-white dark:bg-black/20 border px-3 py-1.5 rounded text-sm font-mono tracking-widest">{newEntry.password}</code>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopy(newEntry.password)}>
                   {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
                 </Button>
               </div>
               <p className="text-xs text-green-600 dark:text-green-500 mt-2">Kata sandi hanya ditampilkan sekali.</p>
+              <Button variant="ghost" size="sm" className="mt-2 h-7 text-xs text-green-700" onClick={() => setNewEntry(null)}>Tutup</Button>
             </div>
           )}
         </CardContent>
@@ -247,7 +258,9 @@ export default function DosenList({ initialList }: DosenListProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditTarget(null)}>Batal</Button>
-            <Button onClick={handleEditSave} disabled={!editForm.nama.trim() || !editForm.email.trim()}>Simpan</Button>
+            <Button onClick={handleEditSave} disabled={!editForm.nama.trim() || !editForm.email.trim() || isPending}>
+              {isPending ? "Menyimpan..." : "Simpan"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -263,8 +276,8 @@ export default function DosenList({ initialList }: DosenListProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              <Trash2 className="h-4 w-4 mr-1.5" />Ya, Hapus
+            <AlertDialogAction onClick={handleDelete} disabled={isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              <Trash2 className="h-4 w-4 mr-1.5" />{isPending ? "Menghapus..." : "Ya, Hapus"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -282,14 +295,14 @@ export default function DosenList({ initialList }: DosenListProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmReset}>
-              <KeyRound className="h-4 w-4 mr-1.5" />Ya, Reset Sandi
+            <AlertDialogAction onClick={handleConfirmReset} disabled={isPending}>
+              <KeyRound className="h-4 w-4 mr-1.5" />{isPending ? "Mereset..." : "Ya, Reset Sandi"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog sandi baru */}
+      {/* Dialog tampil sandi baru */}
       <Dialog open={!!newPassword} onOpenChange={(open) => !open && setNewPassword(null)}>
         <DialogContent>
           <DialogHeader>

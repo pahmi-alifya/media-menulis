@@ -10,7 +10,7 @@ Update status setiap fase selesai.
 - [x] CLAUDE.md & PLANNING.md dibuat dan diperbarui
 - [x] FASE 0 — UI First (Mock Data) — selesai
 - [x] FASE 1 — Fondasi — selesai
-- [ ] FASE 2 — Kelas & Tahap
+- [x] FASE 2 — Kelas & Tahap — selesai
 - [ ] FASE 3 — Konten Viewer
 - [ ] FASE 4 — Submission
 - [ ] FASE 5 — Asesmen

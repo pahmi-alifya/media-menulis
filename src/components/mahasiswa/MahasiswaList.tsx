@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import { Search, Copy, KeyRound, ChevronLeft, ChevronRight, Check, Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,41 +26,48 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { type MockEnrollment } from "@/lib/mock/data"
+import {
+  removeEnrollmentAction,
+  updateEnrollmentAction,
+  resetMahasiswaPasswordAction,
+} from "@/server/actions/enrollment.actions"
+
+type EnrollmentRow = {
+  id: string
+  userId: string
+  nim: string | null
+  joinedAt: Date
+  user: { id: string; nama: string; email: string; nim: string | null }
+}
 
 const PAGE_SIZE = 4
 
-function generatePassword(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$"
-  return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("")
-}
-
 interface MahasiswaListProps {
-  enrollmentList: MockEnrollment[]
+  enrollments: EnrollmentRow[]
+  kelasId: string
 }
 
-export default function MahasiswaList({ enrollmentList: initial }: MahasiswaListProps) {
-  const [list, setList] = useState<MockEnrollment[]>(initial)
+export default function MahasiswaList({ enrollments: initial, kelasId }: MahasiswaListProps) {
+  const router = useRouter()
+  const [list, setList] = useState<EnrollmentRow[]>(initial)
   const [query, setQuery] = useState("")
   const [page, setPage] = useState(1)
+  const [isPending, startTransition] = useTransition()
 
-  // Edit
-  const [editTarget, setEditTarget] = useState<MockEnrollment | null>(null)
+  const [editTarget, setEditTarget] = useState<EnrollmentRow | null>(null)
   const [editForm, setEditForm] = useState({ nama: "", nim: "", email: "" })
-
-  // Delete
-  const [deleteTarget, setDeleteTarget] = useState<MockEnrollment | null>(null)
-
-  // Reset sandi
-  const [resetTarget, setResetTarget] = useState<MockEnrollment | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<EnrollmentRow | null>(null)
+  const [resetTarget, setResetTarget] = useState<EnrollmentRow | null>(null)
   const [newPassword, setNewPassword] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
+  useEffect(() => { setList(initial) }, [initial])
+
   const filtered = list.filter(
     (e) =>
-      e.namaMahasiswa.toLowerCase().includes(query.toLowerCase()) ||
-      e.email.toLowerCase().includes(query.toLowerCase()) ||
-      (e.nim ?? "").includes(query)
+      e.user.nama.toLowerCase().includes(query.toLowerCase()) ||
+      e.user.email.toLowerCase().includes(query.toLowerCase()) ||
+      (e.user.nim ?? "").includes(query),
   )
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
@@ -67,39 +75,54 @@ export default function MahasiswaList({ enrollmentList: initial }: MahasiswaList
 
   function handleQueryChange(val: string) { setQuery(val); setPage(1) }
 
-  function openEdit(e: MockEnrollment) {
+  function openEdit(e: EnrollmentRow) {
     setEditTarget(e)
-    setEditForm({ nama: e.namaMahasiswa, nim: e.nim ?? "", email: e.email })
+    setEditForm({ nama: e.user.nama, nim: e.user.nim ?? "", email: e.user.email })
   }
 
   function handleEditSave() {
     if (!editTarget) return
-    setList((prev) =>
-      prev.map((e) =>
-        e.id === editTarget.id
-          ? { ...e, namaMahasiswa: editForm.nama.trim(), nim: editForm.nim.trim() || null, email: editForm.email.trim() }
-          : e
+    startTransition(async () => {
+      const result = await updateEnrollmentAction({
+        enrollmentId: editTarget.id,
+        nama: editForm.nama,
+        nim: editForm.nim || undefined,
+        email: editForm.email,
+      })
+      if (result.error) { toast.error(result.error); return }
+      setList((prev) =>
+        prev.map((e) =>
+          e.id === editTarget.id
+            ? { ...e, user: { ...e.user, nama: editForm.nama.trim(), nim: editForm.nim.trim() || null, email: editForm.email.trim() } }
+            : e,
+        ),
       )
-    )
-    setEditTarget(null)
-    toast.success("Data mahasiswa diperbarui.")
-    // TODO: replace with Server Action — updateEnrollment(id, { nama, nim, email })
+      setEditTarget(null)
+      toast.success("Data mahasiswa diperbarui.")
+      router.refresh()
+    })
   }
 
   function handleDelete() {
     if (!deleteTarget) return
-    setList((prev) => prev.filter((e) => e.id !== deleteTarget.id))
-    setDeleteTarget(null)
-    toast.success(`${deleteTarget.namaMahasiswa} dihapus dari daftar.`)
-    // TODO: replace with Server Action — removeEnrollment(id)
+    startTransition(async () => {
+      const result = await removeEnrollmentAction(deleteTarget.id)
+      if (result.error) { toast.error(result.error); return }
+      setList((prev) => prev.filter((e) => e.id !== deleteTarget.id))
+      setDeleteTarget(null)
+      toast.success(`${deleteTarget.user.nama} dihapus dari daftar.`)
+      router.refresh()
+    })
   }
 
   function handleConfirmReset() {
     if (!resetTarget) return
-    const pwd = generatePassword()
-    setNewPassword(pwd)
-    setResetTarget(null)
-    // TODO: replace with Server Action — resetPassword(userId, newPassword)
+    startTransition(async () => {
+      const result = await resetMahasiswaPasswordAction(resetTarget.userId, kelasId)
+      if (result.error) { toast.error(result.error); return }
+      setNewPassword(result.data!.password)
+      setResetTarget(null)
+    })
   }
 
   function handleCopy(text: string) {
@@ -111,7 +134,6 @@ export default function MahasiswaList({ enrollmentList: initial }: MahasiswaList
 
   return (
     <div className="space-y-3">
-      {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -128,13 +150,10 @@ export default function MahasiswaList({ enrollmentList: initial }: MahasiswaList
           : `${filtered.length} dari ${list.length} mahasiswa`}
       </p>
 
-      {/* Tabel */}
       <Card>
         <CardContent className="p-0">
           {paginated.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              Tidak ada mahasiswa yang cocok.
-            </p>
+            <p className="text-sm text-muted-foreground text-center py-8">Tidak ada mahasiswa yang cocok.</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -150,15 +169,13 @@ export default function MahasiswaList({ enrollmentList: initial }: MahasiswaList
                 {paginated.map((e, idx) => (
                   <tr key={e.id} className={idx < paginated.length - 1 ? "border-b" : ""}>
                     <td className="px-4 py-3">
-                      <p className="font-medium">{e.namaMahasiswa}</p>
-                      <p className="text-xs text-muted-foreground sm:hidden">{e.nim ?? "—"}</p>
+                      <p className="font-medium">{e.user.nama}</p>
+                      <p className="text-xs text-muted-foreground sm:hidden">{e.user.nim ?? "—"}</p>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
-                      {e.nim ?? <span className="italic opacity-50">Belum diisi</span>}
+                      {e.user.nim ?? <span className="italic opacity-50">Belum diisi</span>}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
-                      {e.email}
-                    </td>
+                    <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{e.user.email}</td>
                     <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
                       {new Date(e.joinedAt).toLocaleDateString("id-ID", {
                         day: "numeric", month: "short", year: "numeric",
@@ -166,25 +183,13 @@ export default function MahasiswaList({ enrollmentList: initial }: MahasiswaList
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          title="Edit"
-                          onClick={() => openEdit(e)}
-                        >
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" title="Edit" onClick={() => openEdit(e)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
-                          variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          title="Reset Sandi"
-                          onClick={() => setResetTarget(e)}
-                        >
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" title="Reset Sandi" onClick={() => setResetTarget(e)}>
                           <KeyRound className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
-                          variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          title="Hapus"
-                          onClick={() => setDeleteTarget(e)}
-                        >
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" title="Hapus" onClick={() => setDeleteTarget(e)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -197,7 +202,6 @@ export default function MahasiswaList({ enrollmentList: initial }: MahasiswaList
         </CardContent>
       </Card>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setPage((p) => p - 1)} className="gap-1">
@@ -205,9 +209,7 @@ export default function MahasiswaList({ enrollmentList: initial }: MahasiswaList
           </Button>
           <div className="flex items-center gap-1">
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-              <Button key={n} variant={n === currentPage ? "default" : "ghost"} size="sm" className="w-8 h-8 p-0" onClick={() => setPage(n)}>
-                {n}
-              </Button>
+              <Button key={n} variant={n === currentPage ? "default" : "ghost"} size="sm" className="w-8 h-8 p-0" onClick={() => setPage(n)}>{n}</Button>
             ))}
           </div>
           <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setPage((p) => p + 1)} className="gap-1">
@@ -239,8 +241,8 @@ export default function MahasiswaList({ enrollmentList: initial }: MahasiswaList
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditTarget(null)}>Batal</Button>
-            <Button onClick={handleEditSave} disabled={!editForm.nama.trim() || !editForm.email.trim()}>
-              Simpan
+            <Button onClick={handleEditSave} disabled={!editForm.nama.trim() || !editForm.email.trim() || isPending}>
+              {isPending ? "Menyimpan..." : "Simpan"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -252,39 +254,39 @@ export default function MahasiswaList({ enrollmentList: initial }: MahasiswaList
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus Mahasiswa?</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{deleteTarget?.namaMahasiswa}</strong> akan dihapus dari daftar peserta.
+              <strong>{deleteTarget?.user.nama}</strong> akan dihapus dari daftar peserta.
               Seluruh data submission mahasiswa ini juga akan ikut terhapus. Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              <Trash2 className="h-4 w-4 mr-1.5" />Ya, Hapus
+            <AlertDialogAction onClick={handleDelete} disabled={isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              <Trash2 className="h-4 w-4 mr-1.5" />{isPending ? "Menghapus..." : "Ya, Hapus"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog Reset Sandi — konfirmasi */}
+      {/* Dialog Reset Sandi */}
       <AlertDialog open={!!resetTarget} onOpenChange={(open) => !open && setResetTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Reset Kata Sandi?</AlertDialogTitle>
             <AlertDialogDescription>
-              Kata sandi baru akan dibuat untuk <strong>{resetTarget?.namaMahasiswa}</strong> ({resetTarget?.email}).
+              Kata sandi baru akan dibuat untuk <strong>{resetTarget?.user.nama}</strong> ({resetTarget?.user.email}).
               Kata sandi lama tidak akan bisa digunakan lagi.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmReset}>
-              <KeyRound className="h-4 w-4 mr-1.5" />Ya, Reset Sandi
+            <AlertDialogAction onClick={handleConfirmReset} disabled={isPending}>
+              <KeyRound className="h-4 w-4 mr-1.5" />{isPending ? "Mereset..." : "Ya, Reset Sandi"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog tampilkan sandi baru */}
+      {/* Dialog sandi baru */}
       <Dialog open={!!newPassword} onOpenChange={(open) => !open && setNewPassword(null)}>
         <DialogContent>
           <DialogHeader>
@@ -293,9 +295,7 @@ export default function MahasiswaList({ enrollmentList: initial }: MahasiswaList
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="flex items-center gap-2">
-              <code className="flex-1 bg-muted border px-4 py-2.5 rounded-md text-base font-mono tracking-widest text-center">
-                {newPassword}
-              </code>
+              <code className="flex-1 bg-muted border px-4 py-2.5 rounded-md text-base font-mono tracking-widest text-center">{newPassword}</code>
               <Button variant="outline" size="icon" className="shrink-0" onClick={() => newPassword && handleCopy(newPassword)}>
                 {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
               </Button>

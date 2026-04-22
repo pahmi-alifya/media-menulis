@@ -1,6 +1,19 @@
-import { redirect } from "next/navigation"
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
-export default function RootPage() {
-  // TODO: replace with real auth check — if logged in, redirect to /dosen/dashboard or /mahasiswa/dashboard
-  redirect("/login")
+export default async function RootPage() {
+  const session = await auth();
+
+  if (!session) redirect("/login");
+
+  switch (session.user.role) {
+    case "DOSEN":
+      redirect("/dosen/dashboard");
+    case "ADMIN":
+      redirect("/admin/dosen");
+    case "MAHASISWA":
+      redirect("/mahasiswa/dashboard");
+    default:
+      redirect("/404");
+  }
 }

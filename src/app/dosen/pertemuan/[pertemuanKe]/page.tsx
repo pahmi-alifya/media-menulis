@@ -1,11 +1,10 @@
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { auth } from "@/auth"
+import { redirect } from "next/navigation"
+import { getKelasByDosen, getTahapsByKelas } from "@/server/queries/kelas.queries"
 import TahapKelasPanel from "@/components/tahap/TahapKelasPanel"
-import { mockTahapList } from "@/lib/mock/data"
-
-// TODO: replace with real API
-const tahapList = mockTahapList.filter((t) => t.kelasId === "k1")
 
 export default async function DosenPertemuanPage({
   params,
@@ -14,6 +13,13 @@ export default async function DosenPertemuanPage({
 }) {
   const { pertemuanKe } = await params
   const p = Number(pertemuanKe)
+
+  const session = await auth()
+  const kelas = session?.user?.id ? await getKelasByDosen(session.user.id) : null
+
+  if (!kelas) redirect("/dosen/dashboard")
+
+  const tahapList = await getTahapsByKelas(kelas.id)
 
   return (
     <div className="p-6 space-y-6">

@@ -1,10 +1,9 @@
 import DosenList from "@/components/dosen/DosenList"
-import { mockDosenList } from "@/lib/mock/data"
+import { getDosenList } from "@/server/queries/kelas.queries"
 
-// TODO: replace with real API
-const dosenList = mockDosenList
+export default async function AdminDosenPage() {
+  const dosenList = await getDosenList()
 
-export default function AdminDosenPage() {
   return (
     <div className="space-y-2">
       <div>
