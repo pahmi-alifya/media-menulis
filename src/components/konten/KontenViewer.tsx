@@ -21,16 +21,43 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import RichTextEditor from "@/components/konten/RichTextEditor"
-import {
-  type MockKonten,
-  type MockTahap,
-  type MockSubmission,
-  type KontenTipe,
-  type MockPesan,
-  TIPE_SUBMISI_LABEL,
-  KATEGORI_LABEL,
-} from "@/lib/mock/data"
+import { TIPE_SUBMISI_LABEL, KATEGORI_LABEL } from "@/lib/mock/data"
 import { buildEmbedUrl } from "@/lib/utils/url-parser"
+
+// ─── Local types (Prisma-compatible) ─────────────────────────────────────────
+
+type KontenTipe = "TEKS" | "VIDEO" | "INFOGRAFIS" | "DOKUMEN" | "TEMPLATE"
+type KategoriKonten = "LIHAT" | "SERAHKAN" | "BERKONTRIBUSI"
+
+type KontenItem = {
+  id: string
+  tipe: KontenTipe
+  judul: string
+  body: string | null
+  url: string | null
+  urutan: number
+  kategori: KategoriKonten
+}
+
+type TahapForViewer = {
+  id: string
+  urutan: number
+  tipeSubmisi: string
+}
+
+type SubmissionForViewer = {
+  isDraft: boolean
+} | null
+
+type PesanItem = {
+  id: string
+  namaPengirim: string
+  rolePengirim: "DOSEN" | "MAHASISWA" | "ADMIN"
+  isi: string
+  replyToId: string | null
+  createdAt: string
+  replies?: PesanItem[]
+}
 
 // ─── Full-width konten display ────────────────────────────────────────────────
 
@@ -50,7 +77,7 @@ const LABEL_MAP: Record<KontenTipe, string> = {
   TEMPLATE: "Template",
 }
 
-function KontenDisplay({ konten }: { konten: MockKonten }) {
+function KontenDisplay({ konten }: { konten: KontenItem }) {
   const Icon = ICON_MAP[konten.tipe]
   const embed = konten.url ? buildEmbedUrl(konten.url) : null
 
@@ -173,7 +200,7 @@ function ForumSection({
   kelompokName,
 }: {
   kontenId: string
-  pesanList: MockPesan[]
+  pesanList: PesanItem[]
   tahapUrutan: number
   kelompokName?: string | null
 }) {
@@ -350,9 +377,9 @@ function SubmissionCard({
   pertemuanKe,
   mySubmission,
 }: {
-  tahap: MockTahap
+  tahap: TahapForViewer
   pertemuanKe: number
-  mySubmission?: MockSubmission | null
+  mySubmission?: SubmissionForViewer
 }) {
   const sudahKumpul = mySubmission && !mySubmission.isDraft
   const isDraft = mySubmission?.isDraft
@@ -363,7 +390,7 @@ function SubmissionCard({
         <div className="flex items-center gap-2">
           <span className="font-semibold text-sm">Tugas</span>
           <Badge variant="secondary" className="text-xs">
-            {TIPE_SUBMISI_LABEL[tahap.tipeSubmisi]}
+            {TIPE_SUBMISI_LABEL[tahap.tipeSubmisi as keyof typeof TIPE_SUBMISI_LABEL]}
           </Badge>
         </div>
         {sudahKumpul ? (
@@ -391,11 +418,11 @@ function SubmissionCard({
 // ─── Main KontenViewer ────────────────────────────────────────────────────────
 
 interface KontenViewerProps {
-  kontenList: MockKonten[]
-  tahap: MockTahap
+  kontenList: KontenItem[]
+  tahap: TahapForViewer
   pertemuanKe: number
-  mySubmission?: MockSubmission | null
-  pesanList?: MockPesan[]
+  mySubmission?: SubmissionForViewer
+  pesanList?: PesanItem[]
   kelompokName?: string | null
 }
 
@@ -414,7 +441,7 @@ export default function KontenViewer({
   const [completedIds, setCompletedIds] = useState<Set<string>>(() => {
     const auto = new Set<string>()
     if (mySubmission && !mySubmission.isDraft) {
-      kontenList.filter((k) => k.kategori === "SERAHKAN").forEach((k) => auto.add(k.id))
+      sorted.filter((k) => k.kategori === "SERAHKAN").forEach((k) => auto.add(k.id))
     }
     return auto
   })

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useTransition } from "react"
 import { CheckCircle2, Clock, ExternalLink, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,14 +17,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { toast } from "sonner"
 import RichTextEditor from "@/components/konten/RichTextEditor"
 import RubrikPreview from "@/components/assessment/RubrikPreview"
-import { type TipeSubmisi, type MockSubmission } from "@/lib/mock/data"
+import { saveDraftAction, submitTugasAction } from "@/server/actions/submission.actions"
+
+type ExistingSubmission = {
+  isDraft: boolean
+  isiEsai: string | null
+  linkSubmisi: string | null
+  updatedAt: Date
+} | null
 
 interface SubmissionFormProps {
-  tipeSubmisi: TipeSubmisi
+  tahapId: string
+  tipeSubmisi: string
   tahapUrutan: number
-  existingSubmission?: MockSubmission | null
+  existingSubmission?: ExistingSubmission
 }
 
 const DOMAIN_HINTS: Record<string, string> = {
@@ -40,7 +49,12 @@ function countWords(html: string): number {
   return text.split(" ").filter(Boolean).length
 }
 
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+}
+
 export default function SubmissionForm({
+  tahapId,
   tipeSubmisi,
   tahapUrutan,
   existingSubmission,
@@ -48,32 +62,59 @@ export default function SubmissionForm({
   const isFinal = existingSubmission && !existingSubmission.isDraft
   const [linkValue, setLinkValue] = useState(existingSubmission?.linkSubmisi ?? "")
   const [essayValue, setEssayValue] = useState(existingSubmission?.isiEsai ?? "")
-  const [savedAt, setSavedAt] = useState(existingSubmission?.savedAt ?? null)
+  const [savedAt, setSavedAt] = useState<string | null>(
+    existingSubmission?.updatedAt ? formatTime(existingSubmission.updatedAt) : null,
+  )
   const [submitted, setSubmitted] = useState(isFinal ?? false)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const wordCount = countWords(essayValue)
 
-  // Auto-save untuk TEKS_LANGSUNG
+  // Auto-save untuk TEKS_LANGSUNG — debounce 30 detik
   useEffect(() => {
-    if (tipeSubmisi !== "TEKS_LANGSUNG" || isFinal) return
+    if (tipeSubmisi !== "TEKS_LANGSUNG" || isFinal || !essayValue.trim()) return
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
-    autoSaveTimer.current = setTimeout(() => {
-      // TODO: replace with Server Action — saveDraft()
-      const now = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-      setSavedAt(now)
+    autoSaveTimer.current = setTimeout(async () => {
+      const result = await saveDraftAction(tahapId, { isiEsai: essayValue })
+      if (!result.error) {
+        setSavedAt(formatTime(new Date()))
+      }
     }, 30000)
     return () => {
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
     }
-  }, [essayValue, tipeSubmisi, isFinal])
+  }, [essayValue, tipeSubmisi, isFinal, tahapId])
+
+  function handleSaveDraft() {
+    startTransition(async () => {
+      const result = await saveDraftAction(tahapId, {
+        isiEsai: essayValue || null,
+        linkSubmisi: linkValue || null,
+      })
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      setSavedAt(formatTime(new Date()))
+      toast.success("Draft tersimpan")
+    })
+  }
 
   function handleSubmit() {
-    // TODO: replace with Server Action — submitTugas()
-    setSubmitted(true)
-    const now = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-    setSavedAt(now)
+    startTransition(async () => {
+      const result = await submitTugasAction(tahapId, {
+        isiEsai: essayValue || null,
+        linkSubmisi: linkValue || null,
+      })
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      setSubmitted(true)
+      toast.success("Tugas berhasil dikumpulkan!")
+    })
   }
 
   if (submitted) {
@@ -148,7 +189,11 @@ export default function SubmissionForm({
                   Tersimpan {savedAt}
                 </span>
               )}
-              <span className={wordCount < 800 ? "text-amber-500 font-medium" : "text-green-600 font-medium"}>
+              <span
+                className={
+                  wordCount < 800 ? "text-amber-500 font-medium" : "text-green-600 font-medium"
+                }
+              >
                 {wordCount} kata {wordCount < 800 && `(min. 800)`}
               </span>
             </div>
@@ -216,14 +261,7 @@ export default function SubmissionForm({
       {!isFinal && (
         <div className="flex items-center gap-3 pt-2 flex-wrap">
           {tipeSubmisi === "TEKS_LANGSUNG" && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                const now = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-                setSavedAt(now)
-                // TODO: replace with Server Action — saveDraft()
-              }}
-            >
+            <Button variant="outline" disabled={isPending} onClick={handleSaveDraft}>
               Simpan Draft
             </Button>
           )}
@@ -231,10 +269,12 @@ export default function SubmissionForm({
           <Button
             className="gap-2"
             disabled={
+              isPending ||
               (tipeSubmisi === "TEKS_LANGSUNG" && wordCount < 800) ||
               ((tipeSubmisi === "LINK_SLIDE" ||
                 tipeSubmisi === "LINK_DOKUMEN" ||
-                tipeSubmisi === "LINK_VIDEO") && !linkValue.trim()) ||
+                tipeSubmisi === "LINK_VIDEO") &&
+                !linkValue.trim()) ||
               (tipeSubmisi === "CAMPURAN" && !essayValue.trim() && !linkValue.trim())
             }
             onClick={() => setDialogOpen(true)}
@@ -262,8 +302,14 @@ export default function SubmissionForm({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { handleSubmit(); setDialogOpen(false) }}>
-              Ya, Kumpulkan
+            <AlertDialogAction
+              disabled={isPending}
+              onClick={() => {
+                handleSubmit()
+                setDialogOpen(false)
+              }}
+            >
+              {isPending ? "Mengumpulkan..." : "Ya, Kumpulkan"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

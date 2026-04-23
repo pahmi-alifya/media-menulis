@@ -1,18 +1,16 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import TahapStepper from "@/components/tahap/TahapStepper"
 import KontenViewer from "@/components/konten/KontenViewer"
+import { auth } from "@/auth"
 import {
-  mockTahapList,
-  mockKontenList,
-  mockSubmissionList,
-  mockPesanList,
-  mockEnrollmentList,
-  TAHAP_LABEL,
-} from "@/lib/mock/data"
-
-// TODO: replace with real API
-const tahapList = mockTahapList.filter((t) => t.kelasId === "k1")
+  getTahapById,
+  getKontenByTahap,
+  getSubmissionByMahasiswa,
+  getKelasByMahasiswa,
+} from "@/server/queries/kelas.queries"
+import { TAHAP_LABEL } from "@/lib/mock/data"
 
 export default async function MahasiswaTahapDetailPage({
   params,
@@ -22,22 +20,29 @@ export default async function MahasiswaTahapDetailPage({
   const { pertemuanKe, tahapId } = await params
   const p = Number(pertemuanKe)
 
-  const tahap = tahapList.find((t) => t.id === tahapId) ?? tahapList[0]
-  const kontenList = mockKontenList.filter(
-    (k) => k.tahapId === tahap.id && k.pertemuanKe === p
-  )
-  const mySubmission = mockSubmissionList.find(
-    (s) => s.tahapId === tahap.id && s.userId === "u2"
-  ) ?? null
+  const session = await auth()
+  if (!session?.user?.id) redirect("/login")
 
-  // Pesan forum untuk tahap ini (difilter per tahap, TODO: filter per konten di DB)
-  const pesanList = mockPesanList.filter((m) => m.forumId === `f-${tahap.id}`)
+  const userId = session.user.id
 
-  // Kelompok mahasiswa — untuk ditampilkan di forum Tahap 3 (KMBM)
-  const myEnrollment = mockEnrollmentList.find(
-    (e) => e.kelasId === "k1" && e.userId === "u2"
-  )
-  const kelompokName = myEnrollment?.kelompok ?? null
+  const [tahap, enrollment] = await Promise.all([
+    getTahapById(tahapId),
+    getKelasByMahasiswa(userId),
+  ])
+
+  if (!tahap || !enrollment) redirect("/mahasiswa/dashboard")
+
+  // Redirect ke halaman pertemuan jika tahap belum dibuka
+  if (!tahap.isUnlocked) redirect(`/mahasiswa/pertemuan/${p}`)
+
+  const [kontenList, mySubmission] = await Promise.all([
+    getKontenByTahap(tahapId, p),
+    getSubmissionByMahasiswa(tahapId, userId),
+  ])
+
+  const tahapList = enrollment.kelas.tahaps
+  const kelompokName = enrollment.kelompok ?? null
+  const label = TAHAP_LABEL[tahap.kode as keyof typeof TAHAP_LABEL]
 
   return (
     <div className="space-y-6">
@@ -48,7 +53,7 @@ export default async function MahasiswaTahapDetailPage({
         </Link>
         <span>/</span>
         <span className="text-foreground font-medium">
-          Tahap {tahap.urutan}: {TAHAP_LABEL[tahap.kode].singkat}
+          Tahap {tahap.urutan}: {label?.singkat ?? tahap.kode}
         </span>
       </div>
 
@@ -58,7 +63,7 @@ export default async function MahasiswaTahapDetailPage({
           <TahapStepper
             tahapList={tahapList}
             activeTahapId={tahap.id}
-            kelasId="k1"
+            kelasId={enrollment.kelasId}
             baseHref={`/mahasiswa/pertemuan/${p}/tahap`}
           />
         </CardContent>
@@ -67,10 +72,9 @@ export default async function MahasiswaTahapDetailPage({
       {/* Deskripsi tahap */}
       <div>
         <h1 className="text-xl font-bold mb-1">
-          Tahap {tahap.urutan}: {TAHAP_LABEL[tahap.kode].singkat}
+          Tahap {tahap.urutan}: {label?.singkat ?? tahap.kode}
         </h1>
-        <p className="text-muted-foreground text-sm">{tahap.nama}</p>
-        <p className="text-sm mt-2">{tahap.tujuan}</p>
+        <p className="text-muted-foreground text-sm">{label?.panjang}</p>
       </div>
 
       {/* Konten viewer — satu item per layar */}
@@ -81,7 +85,7 @@ export default async function MahasiswaTahapDetailPage({
           tahap={tahap}
           pertemuanKe={p}
           mySubmission={mySubmission}
-          pesanList={pesanList}
+          pesanList={[]}
           kelompokName={kelompokName}
         />
       </div>

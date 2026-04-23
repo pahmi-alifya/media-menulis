@@ -11,8 +11,8 @@ Update status setiap fase selesai.
 - [x] FASE 0 — UI First (Mock Data) — selesai
 - [x] FASE 1 — Fondasi — selesai
 - [x] FASE 2 — Kelas & Tahap — selesai
-- [ ] FASE 3 — Konten Viewer
-- [ ] FASE 4 — Submission
+- [x] FASE 3 — Konten Viewer
+- [x] FASE 4 — Submission
 - [ ] FASE 5 — Asesmen
 - [ ] FASE 6 — Forum & Polish
 

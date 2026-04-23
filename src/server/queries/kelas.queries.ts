@@ -58,6 +58,12 @@ export async function getKelasByMahasiswa(userId: string) {
   })
 }
 
+export async function getSubmissionByMahasiswa(tahapId: string, userId: string) {
+  return prisma.submission.findUnique({
+    where: { tahapId_userId: { tahapId, userId } },
+  })
+}
+
 export async function getDosenList() {
   return prisma.user.findMany({
     where: { role: "DOSEN" },

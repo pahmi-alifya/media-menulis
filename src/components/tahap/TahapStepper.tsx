@@ -1,10 +1,17 @@
 import Link from "next/link"
 import { Lock, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { type MockTahap, TAHAP_LABEL } from "@/lib/mock/data"
+import { TAHAP_LABEL } from "@/lib/mock/data"
+
+type TahapStep = {
+  id: string
+  urutan: number
+  kode: string
+  isUnlocked: boolean
+}
 
 interface TahapStepperProps {
-  tahapList: MockTahap[]
+  tahapList: TahapStep[]
   activeTahapId?: string
   kelasId: string
   baseHref: string // "/mahasiswa/kelas/[kelasId]/tahap" or "/dosen/..."
@@ -58,7 +65,7 @@ export default function TahapStepper({
                     isActive ? "text-primary" : "text-muted-foreground"
                   )}
                 >
-                  {TAHAP_LABEL[tahap.kode].singkat}
+                  {TAHAP_LABEL[tahap.kode as keyof typeof TAHAP_LABEL]?.singkat ?? tahap.kode}
                 </span>
               </div>
 

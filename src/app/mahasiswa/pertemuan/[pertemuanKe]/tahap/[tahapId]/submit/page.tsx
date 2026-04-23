@@ -1,13 +1,13 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import SubmissionForm from "@/components/submission/SubmissionForm"
 import PanduanSubmisi from "@/components/submission/PanduanSubmisi"
-import { mockTahapList, mockSubmissionList, TAHAP_LABEL } from "@/lib/mock/data"
-
-// TODO: replace with real API
-const tahapList = mockTahapList.filter((t) => t.kelasId === "k1")
+import { auth } from "@/auth"
+import { getTahapById, getSubmissionByMahasiswa } from "@/server/queries/kelas.queries"
+import { TAHAP_LABEL } from "@/lib/mock/data"
 
 export default async function SubmitTugasPage({
   params,
@@ -17,10 +17,18 @@ export default async function SubmitTugasPage({
   const { pertemuanKe, tahapId } = await params
   const p = Number(pertemuanKe)
 
-  const tahap = tahapList.find((t) => t.id === tahapId) ?? tahapList[0]
-  const mySubmission = mockSubmissionList.find(
-    (s) => s.tahapId === tahap.id && s.userId === "u2"
-  ) ?? null
+  const session = await auth()
+  if (!session?.user?.id) redirect("/login")
+
+  const [tahap, mySubmission] = await Promise.all([
+    getTahapById(tahapId),
+    getSubmissionByMahasiswa(tahapId, session.user.id),
+  ])
+
+  if (!tahap) redirect("/mahasiswa/dashboard")
+  if (!tahap.isUnlocked) redirect(`/mahasiswa/pertemuan/${p}`)
+
+  const label = TAHAP_LABEL[tahap.kode as keyof typeof TAHAP_LABEL]
 
   return (
     <div className="space-y-5">
@@ -38,7 +46,7 @@ export default async function SubmitTugasPage({
             </Badge>
           </div>
           <p className="text-muted-foreground text-sm">
-            Tahap {tahap.urutan}: {TAHAP_LABEL[tahap.kode].singkat}
+            Tahap {tahap.urutan}: {label?.singkat ?? tahap.kode}
           </p>
         </div>
       </div>
@@ -46,6 +54,7 @@ export default async function SubmitTugasPage({
       <PanduanSubmisi tipeSubmisi={tahap.tipeSubmisi} />
 
       <SubmissionForm
+        tahapId={tahapId}
         tipeSubmisi={tahap.tipeSubmisi}
         tahapUrutan={tahap.urutan}
         existingSubmission={mySubmission}
