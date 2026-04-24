@@ -1,13 +1,13 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { ArrowLeft, CheckCircle2, Clock, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import ExportCsvButton from "@/components/submission/ExportCsvButton"
-import { mockTahapList, mockSubmissionList, TAHAP_LABEL } from "@/lib/mock/data"
-
-// TODO: replace with real API
-const tahapList = mockTahapList.filter((t) => t.kelasId === "k1")
+import { auth } from "@/auth"
+import { getTahapById, getSubmissionsByTahap } from "@/server/queries/kelas.queries"
+import { TAHAP_LABEL } from "@/lib/mock/data"
 
 export default async function DosenSubmissionsPage({
   params,
@@ -17,10 +17,18 @@ export default async function DosenSubmissionsPage({
   const { pertemuanKe, tahapId } = await params
   const p = Number(pertemuanKe)
 
-  const tahap = tahapList.find((t) => t.id === tahapId) ?? tahapList[0]
-  const submissions = mockSubmissionList.filter((s) => s.tahapId === tahap.id)
+  const session = await auth()
+  if (!session?.user?.id) redirect("/login")
+
+  const tahap = await getTahapById(tahapId)
+  if (!tahap) redirect(`/dosen/pertemuan/${p}`)
+  if (tahap.kelas.dosenId !== session.user.id) redirect(`/dosen/pertemuan/${p}`)
+
+  const submissions = await getSubmissionsByTahap(tahapId)
   const final = submissions.filter((s) => !s.isDraft)
   const draft = submissions.filter((s) => s.isDraft)
+
+  const label = TAHAP_LABEL[tahap.kode as keyof typeof TAHAP_LABEL]
 
   return (
     <div className="p-6 space-y-6">
@@ -34,17 +42,13 @@ export default async function DosenSubmissionsPage({
           <div>
             <h1 className="text-xl font-bold">Submissions</h1>
             <p className="text-muted-foreground text-sm">
-              Pertemuan {p} — Tahap {tahap.urutan}: {TAHAP_LABEL[tahap.kode].singkat}
+              Pertemuan {p} — Tahap {tahap.urutan}: {label?.singkat ?? tahap.kode}
             </p>
           </div>
         </div>
 
-        {/* Export CSV */}
         {submissions.length > 0 && (
-          <ExportCsvButton
-            submissions={submissions}
-            tahapKode={tahap.kode}
-          />
+          <ExportCsvButton submissions={submissions} tahapKode={tahap.kode} />
         )}
       </div>
 
@@ -90,7 +94,12 @@ export default async function DosenSubmissionsPage({
               <tbody>
                 {submissions.map((s, idx) => (
                   <tr key={s.id} className={idx < submissions.length - 1 ? "border-b" : ""}>
-                    <td className="px-4 py-3 font-medium">{s.namaMahasiswa}</td>
+                    <td className="px-4 py-3 font-medium">
+                      {s.user.nama}
+                      {s.user.nim && (
+                        <span className="text-xs text-muted-foreground ml-1">({s.user.nim})</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 hidden sm:table-cell">
                       {s.isDraft ? (
                         <Badge variant="outline" className="gap-1 text-xs">
@@ -103,11 +112,17 @@ export default async function DosenSubmissionsPage({
                       )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
-                      {s.submittedAt ?? "—"}
+                      {s.submittedAt
+                        ? s.submittedAt.toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          })
+                        : "—"}
                     </td>
                     <td className="px-4 py-3">
                       {s.nilaiTotal !== null ? (
-                        <span className="font-semibold">{s.nilaiTotal}</span>
+                        <span className="font-semibold">{s.nilaiTotal.toFixed(1)}</span>
                       ) : (
                         <span className="text-muted-foreground text-xs">Belum dinilai</span>
                       )}

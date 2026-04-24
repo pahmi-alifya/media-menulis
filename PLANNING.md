@@ -13,7 +13,7 @@ Update status setiap fase selesai.
 - [x] FASE 2 — Kelas & Tahap — selesai
 - [x] FASE 3 — Konten Viewer
 - [x] FASE 4 — Submission
-- [ ] FASE 5 — Asesmen
+- [x] FASE 5 — Asesmen
 - [ ] FASE 6 — Forum & Polish
 
 ---

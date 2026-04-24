@@ -64,6 +64,40 @@ export async function getSubmissionByMahasiswa(tahapId: string, userId: string) 
   })
 }
 
+export async function getMySubmissionWithNilai(tahapId: string, userId: string) {
+  return prisma.submission.findUnique({
+    where: { tahapId_userId: { tahapId, userId } },
+    include: {
+      nilaiAspeks: { orderBy: { aspek: "asc" } },
+      nilaiKolabs: { orderBy: { aspek: "asc" } },
+    },
+  })
+}
+
+export async function getSubmissionsByTahap(tahapId: string) {
+  return prisma.submission.findMany({
+    where: { tahapId },
+    include: {
+      user: { select: { id: true, nama: true, nim: true, email: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  })
+}
+
+export async function getSubmissionWithNilai(submissionId: string) {
+  return prisma.submission.findUnique({
+    where: { id: submissionId },
+    include: {
+      user: { select: { nama: true, nim: true, email: true } },
+      tahap: {
+        include: { kelas: { select: { dosenId: true, nama: true } } },
+      },
+      nilaiAspeks: true,
+      nilaiKolabs: true,
+    },
+  })
+}
+
 export async function getDosenList() {
   return prisma.user.findMany({
     where: { role: "DOSEN" },

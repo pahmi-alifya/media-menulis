@@ -2,26 +2,36 @@
 
 import { Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { type MockSubmission } from "@/lib/mock/data"
+
+type SubmissionRow = {
+  isDraft: boolean
+  submittedAt: Date | null
+  nilaiTotal: number | null
+  user: { nama: string; nim: string | null; email: string }
+}
 
 interface ExportCsvButtonProps {
-  submissions: MockSubmission[]
+  submissions: SubmissionRow[]
   tahapKode: string
 }
 
 export default function ExportCsvButton({ submissions, tahapKode }: ExportCsvButtonProps) {
   function handleExport() {
-    const headers = ["Nama Mahasiswa", "Status", "Waktu Kumpul", "Nilai"]
+    const headers = ["Nama Mahasiswa", "NIM", "Email", "Status", "Waktu Kumpul", "Nilai"]
     const rows = submissions.map((s) => [
-      s.namaMahasiswa,
+      s.user.nama,
+      s.user.nim ?? "-",
+      s.user.email,
       s.isDraft ? "Draft" : "Terkumpul",
-      s.submittedAt ?? "-",
-      s.nilaiTotal !== null ? String(s.nilaiTotal) : "-",
+      s.submittedAt
+        ? s.submittedAt.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+        : "-",
+      s.nilaiTotal !== null ? s.nilaiTotal.toFixed(1) : "-",
     ])
 
     const csvContent = [
       headers.join(","),
-      ...rows.map((r) => r.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")),
+      ...rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")),
     ].join("\n")
 
     const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" })

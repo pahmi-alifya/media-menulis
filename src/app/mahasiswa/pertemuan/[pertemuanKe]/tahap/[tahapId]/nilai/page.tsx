@@ -1,18 +1,37 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { mockTahapList, mockSubmissionList, mockNilaiAspekList, TAHAP_LABEL, ASPEK_LABEL } from "@/lib/mock/data"
+import { auth } from "@/auth"
+import { getTahapById, getMySubmissionWithNilai } from "@/server/queries/kelas.queries"
+import {
+  TAHAP_LABEL,
+  ASPEK_LABEL,
+  ASPEK_KOLABORASI_LABEL,
+  type AspekNilai,
+  type AspekKolaborasi,
+} from "@/lib/mock/data"
 
-// TODO: replace with real API
-const tahapList = mockTahapList.filter((t) => t.kelasId === "k1")
-
-function skorToLabel(skor: number) {
+function skorToLabelEsai(skor: number) {
   if (skor === 4) return { label: "Sangat Baik", color: "text-green-600" }
   if (skor === 3) return { label: "Baik", color: "text-blue-600" }
   if (skor === 2) return { label: "Cukup", color: "text-amber-600" }
   return { label: "Kurang", color: "text-red-600" }
+}
+
+function skorToLabelKolab(skor: number) {
+  if (skor === 3) return { label: "Baik", color: "text-green-600" }
+  if (skor === 2) return { label: "Cukup", color: "text-amber-600" }
+  return { label: "Kurang", color: "text-red-600" }
+}
+
+function predikat(nilai: number) {
+  if (nilai >= 85) return "Sangat Memuaskan"
+  if (nilai >= 70) return "Memuaskan"
+  if (nilai >= 55) return "Cukup"
+  return "Perlu Perbaikan"
 }
 
 export default async function NilaiMahasiswaPage({
@@ -23,11 +42,21 @@ export default async function NilaiMahasiswaPage({
   const { pertemuanKe, tahapId } = await params
   const p = Number(pertemuanKe)
 
-  const tahap = tahapList.find((t) => t.id === tahapId) ?? tahapList[3]
-  const submission = mockSubmissionList.find(
-    (s) => s.tahapId === tahap.id && s.userId === "u2"
-  )
-  const nilaiList = mockNilaiAspekList
+  const session = await auth()
+  if (!session?.user?.id) redirect("/login")
+
+  const [tahap, submission] = await Promise.all([
+    getTahapById(tahapId),
+    getMySubmissionWithNilai(tahapId, session.user.id),
+  ])
+
+  if (!tahap) redirect("/mahasiswa/dashboard")
+
+  type NilaiRow = { aspek: string; skor: number; komentar: string | null }
+
+  const label = TAHAP_LABEL[tahap.kode as keyof typeof TAHAP_LABEL]
+  const isIMMM = tahap.kode === "IMMM"
+  const isKMBM = tahap.kode === "KMBM"
 
   if (!submission?.nilaiTotal) {
     return (
@@ -56,7 +85,7 @@ export default async function NilaiMahasiswaPage({
         <div>
           <h1 className="text-xl font-bold">Nilai Saya</h1>
           <p className="text-muted-foreground text-sm">
-            Tahap {tahap.urutan}: {TAHAP_LABEL[tahap.kode].singkat}
+            Tahap {tahap.urutan}: {label?.singkat ?? tahap.kode}
           </p>
         </div>
       </div>
@@ -64,44 +93,71 @@ export default async function NilaiMahasiswaPage({
       <Card className="border-primary/30">
         <CardContent className="pt-6 pb-6 text-center">
           <p className="text-muted-foreground text-sm mb-1">Nilai Akhir</p>
-          <p className="text-5xl font-bold">{submission.nilaiTotal}</p>
+          <p className="text-5xl font-bold">{submission.nilaiTotal.toFixed(1)}</p>
           <p className="text-muted-foreground text-sm mt-1">dari 100</p>
-          <Badge className="mt-3">
-            {submission.nilaiTotal >= 85
-              ? "Sangat Memuaskan"
-              : submission.nilaiTotal >= 70
-              ? "Memuaskan"
-              : submission.nilaiTotal >= 55
-              ? "Cukup"
-              : "Perlu Perbaikan"}
-          </Badge>
+          <Badge className="mt-3">{predikat(submission.nilaiTotal)}</Badge>
         </CardContent>
       </Card>
 
-      <div className="space-y-3">
-        <h2 className="font-semibold">Rincian Penilaian</h2>
-        {nilaiList.map((n) => {
-          const { label, color } = skorToLabel(n.skor)
-          return (
-            <Card key={n.aspek}>
-              <CardHeader className="pb-2 pt-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm">{ASPEK_LABEL[n.aspek]}</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm font-bold ${color}`}>{n.skor}/4</span>
-                    <Badge variant="outline" className={`text-xs ${color}`}>{label}</Badge>
+      {/* Rincian per aspek — IMMM (esai 5 aspek, skala 1–4) */}
+      {isIMMM && submission.nilaiAspeks.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="font-semibold">Rincian Penilaian</h2>
+          {submission.nilaiAspeks.map((n: NilaiRow) => {
+            const { label: lbl, color } = skorToLabelEsai(n.skor)
+            return (
+              <Card key={n.aspek}>
+                <CardHeader className="pb-2 pt-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">
+                      {ASPEK_LABEL[n.aspek as AspekNilai] ?? n.aspek}
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${color}`}>{n.skor}/4</span>
+                      <Badge variant="outline" className={`text-xs ${color}`}>{lbl}</Badge>
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              {n.komentar && (
-                <CardContent className="pt-0 pb-4">
-                  <p className="text-sm text-muted-foreground">{n.komentar}</p>
-                </CardContent>
-              )}
-            </Card>
-          )
-        })}
-      </div>
+                </CardHeader>
+                {n.komentar && (
+                  <CardContent className="pt-0 pb-4">
+                    <p className="text-sm text-muted-foreground">{n.komentar}</p>
+                  </CardContent>
+                )}
+              </Card>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Rincian per aspek — KMBM (kolaborasi 2 aspek, skala 1–3) */}
+      {isKMBM && submission.nilaiKolabs.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="font-semibold">Rincian Penilaian Kolaborasi</h2>
+          {submission.nilaiKolabs.map((n: NilaiRow) => {
+            const { label: lbl, color } = skorToLabelKolab(n.skor)
+            return (
+              <Card key={n.aspek}>
+                <CardHeader className="pb-2 pt-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">
+                      {ASPEK_KOLABORASI_LABEL[n.aspek as AspekKolaborasi] ?? n.aspek}
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${color}`}>{n.skor}/3</span>
+                      <Badge variant="outline" className={`text-xs ${color}`}>{lbl}</Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                {n.komentar && (
+                  <CardContent className="pt-0 pb-4">
+                    <p className="text-sm text-muted-foreground">{n.komentar}</p>
+                  </CardContent>
+                )}
+              </Card>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

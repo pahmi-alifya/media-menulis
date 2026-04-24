@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { ArrowLeft, ExternalLink, Clock, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -6,14 +7,9 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import RubrikForm from "@/components/assessment/RubrikForm"
 import RubrikKolaborasiForm from "@/components/assessment/RubrikKolaborasiForm"
-import { mockTahapList, mockSubmissionList, mockNilaiAspekList, TAHAP_LABEL } from "@/lib/mock/data"
-
-// TODO: replace with real API
-const tahapList = mockTahapList.filter((t) => t.kelasId === "k1")
-
-const initialValues = Object.fromEntries(
-  mockNilaiAspekList.map((n) => [n.aspek, { skor: n.skor, komentar: n.komentar }])
-) as Record<string, { skor: number; komentar: string }>
+import { auth } from "@/auth"
+import { getSubmissionWithNilai } from "@/server/queries/kelas.queries"
+import { TAHAP_LABEL, type AspekNilai, type AspekKolaborasi } from "@/lib/mock/data"
 
 export default async function DosenSubmissionDetailPage({
   params,
@@ -23,10 +19,29 @@ export default async function DosenSubmissionDetailPage({
   const { pertemuanKe, tahapId, subId } = await params
   const p = Number(pertemuanKe)
 
-  const tahap = tahapList.find((t) => t.id === tahapId) ?? tahapList[3]
-  const submission = mockSubmissionList.find((s) => s.id === subId) ?? mockSubmissionList[4]
+  const session = await auth()
+  if (!session?.user?.id) redirect("/login")
+
+  const submission = await getSubmissionWithNilai(subId)
+  if (!submission) redirect(`/dosen/pertemuan/${p}/tahap/${tahapId}/submissions`)
+  if (submission.tahap.kelas.dosenId !== session.user.id)
+    redirect(`/dosen/pertemuan/${p}/tahap/${tahapId}/submissions`)
+
+  const tahap = submission.tahap
+  const label = TAHAP_LABEL[tahap.kode as keyof typeof TAHAP_LABEL]
   const isIMMM = tahap.kode === "IMMM"
   const isKMBM = tahap.kode === "KMBM"
+
+  type NilaiRow = { aspek: string; skor: number; komentar: string | null }
+
+  // Build initialValues dari nilaiAspeks / nilaiKolabs
+  const initialEsai = Object.fromEntries(
+    submission.nilaiAspeks.map((n: NilaiRow) => [n.aspek, { skor: n.skor, komentar: n.komentar ?? "" }])
+  ) as Partial<Record<AspekNilai, { skor: number; komentar: string }>>
+
+  const initialKolab = Object.fromEntries(
+    submission.nilaiKolabs.map((n: NilaiRow) => [n.aspek, { skor: n.skor, komentar: n.komentar ?? "" }])
+  ) as Partial<Record<AspekKolaborasi, { skor: number; komentar: string }>>
 
   return (
     <div className="p-6 space-y-6">
@@ -39,7 +54,7 @@ export default async function DosenSubmissionDetailPage({
         <div>
           <h1 className="text-xl font-bold">Detail Submission</h1>
           <p className="text-muted-foreground text-sm">
-            {submission.namaMahasiswa} · Pertemuan {p} · Tahap {tahap.urutan}: {TAHAP_LABEL[tahap.kode].singkat}
+            {submission.user.nama} · Pertemuan {p} · Tahap {tahap.urutan}: {label?.singkat ?? tahap.kode}
           </p>
         </div>
       </div>
@@ -47,7 +62,7 @@ export default async function DosenSubmissionDetailPage({
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <CardTitle className="text-base">{submission.namaMahasiswa}</CardTitle>
+            <CardTitle className="text-base">{submission.user.nama}</CardTitle>
             {submission.isDraft ? (
               <Badge variant="outline" className="gap-1 text-amber-600 border-amber-400">
                 <Clock className="h-3 w-3" />Draft
@@ -59,7 +74,16 @@ export default async function DosenSubmissionDetailPage({
             )}
           </div>
           {submission.submittedAt && (
-            <p className="text-xs text-muted-foreground">Dikumpulkan: {submission.submittedAt}</p>
+            <p className="text-xs text-muted-foreground">
+              Dikumpulkan:{" "}
+              {submission.submittedAt.toLocaleDateString("id-ID", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
           )}
         </CardHeader>
         <CardContent className="space-y-4">
@@ -77,9 +101,10 @@ export default async function DosenSubmissionDetailPage({
           {submission.isiEsai && (
             <div className="space-y-2">
               <p className="text-sm font-medium">Esai:</p>
-              <div className="bg-muted/30 rounded-md p-4 text-sm leading-relaxed whitespace-pre-wrap border">
-                {submission.isiEsai}
-              </div>
+              <div
+                className="rich-editor-content bg-muted/30 rounded-md p-4 text-sm leading-relaxed border"
+                dangerouslySetInnerHTML={{ __html: submission.isiEsai }}
+              />
             </div>
           )}
         </CardContent>
@@ -91,15 +116,18 @@ export default async function DosenSubmissionDetailPage({
         <div className="space-y-4">
           <h2 className="font-semibold">Penilaian Rubrik Esai Mandiri</h2>
           <RubrikForm
+            submissionId={subId}
             isReadOnly={submission.nilaiTotal !== null}
-            initialValues={submission.nilaiTotal !== null ? initialValues : undefined}
+            initialValues={submission.nilaiAspeks.length > 0 ? initialEsai : undefined}
           />
         </div>
       ) : isKMBM ? (
         <div className="space-y-4">
           <h2 className="font-semibold">Penilaian Kolaborasi Individual</h2>
           <RubrikKolaborasiForm
+            submissionId={subId}
             isReadOnly={submission.nilaiTotal !== null}
+            initialValues={submission.nilaiKolabs.length > 0 ? initialKolab : undefined}
           />
         </div>
       ) : (
