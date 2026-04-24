@@ -1,11 +1,16 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 import { auth } from "@/auth"
-import { getTahapById, getMySubmissionWithNilai } from "@/server/queries/kelas.queries"
+import {
+  getTahapById,
+  getMySubmissionWithNilai,
+  getPeerReviewsReceived,
+} from "@/server/queries/kelas.queries"
 import {
   TAHAP_LABEL,
   ASPEK_LABEL,
@@ -45,9 +50,10 @@ export default async function NilaiMahasiswaPage({
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
 
-  const [tahap, submission] = await Promise.all([
+  const [tahap, submission, peerReviewsReceived] = await Promise.all([
     getTahapById(tahapId),
     getMySubmissionWithNilai(tahapId, session.user.id),
+    getPeerReviewsReceived(tahapId, session.user.id),
   ])
 
   if (!tahap) redirect("/mahasiswa/dashboard")
@@ -157,6 +163,47 @@ export default async function NilaiMahasiswaPage({
             )
           })}
         </div>
+      )}
+
+      {/* Peer review yang diterima — hanya IMMM */}
+      {isIMMM && peerReviewsReceived.length > 0 && (
+        <div className="space-y-3">
+          <Separator />
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-4 w-4 text-muted-foreground" />
+            <h2 className="font-semibold">Peer Review dari Teman</h2>
+            <Badge variant="secondary" className="text-xs">{peerReviewsReceived.length}</Badge>
+          </div>
+          {peerReviewsReceived.map((pr: { id: string; komentar: string | null }, idx: number) => (
+            <Card key={pr.id}>
+              <CardHeader className="pb-2 pt-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm">Reviewer {idx + 1}</CardTitle>
+                  {pr.komentar === null && (
+                    <Badge variant="outline" className="text-xs text-amber-600">Belum diisi</Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0 pb-4">
+                {pr.komentar ? (
+                  <p className="text-sm whitespace-pre-wrap">{pr.komentar}</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Reviewer belum mengisi komentar.</p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Link ke halaman peer review jika IMMM */}
+      {isIMMM && (
+        <Link href={`/mahasiswa/pertemuan/${p}/tahap/${tahap.id}/peer-review`}>
+          <Button variant="outline" className="w-full gap-2">
+            <MessageCircle className="h-4 w-4" />
+            Lihat Tugas Peer Review Saya
+          </Button>
+        </Link>
       )}
     </div>
   )

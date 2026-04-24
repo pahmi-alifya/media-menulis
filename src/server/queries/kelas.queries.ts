@@ -105,3 +105,40 @@ export async function getDosenList() {
     orderBy: { nama: "asc" },
   })
 }
+
+/** Peer review yang harus dikerjakan oleh mahasiswa (sebagai reviewer). */
+export async function getPeerReviewAsReviewer(tahapId: string, reviewerId: string) {
+  return prisma.peerReview.findFirst({
+    where: {
+      reviewerId,
+      submission: { tahapId },
+    },
+    include: {
+      submission: {
+        select: { isiEsai: true, linkSubmisi: true },
+      },
+      reviewee: { select: { nama: true } },
+    },
+  })
+}
+
+/** Semua peer review yang diterima mahasiswa (sebagai reviewee). */
+export async function getPeerReviewsReceived(tahapId: string, revieweeId: string) {
+  return prisma.peerReview.findMany({
+    where: {
+      revieweeId,
+      submission: { tahapId },
+    },
+    include: {
+      reviewer: { select: { nama: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  })
+}
+
+/** Jumlah peer review yang sudah di-assign untuk sebuah tahap. */
+export async function getPeerReviewCount(tahapId: string) {
+  return prisma.peerReview.count({
+    where: { submission: { tahapId } },
+  })
+}

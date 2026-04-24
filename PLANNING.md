@@ -14,7 +14,7 @@ Update status setiap fase selesai.
 - [x] FASE 3 — Konten Viewer
 - [x] FASE 4 — Submission
 - [x] FASE 5 — Asesmen
-- [ ] FASE 6 — Forum & Polish
+- [x] FASE 6 — Forum & Polish
 
 ---
 

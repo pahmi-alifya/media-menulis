@@ -10,17 +10,14 @@ import {
   Video,
   Image,
   File,
-  MessageSquare,
   ChevronRight as ChevronRightIcon,
   CheckCircle2,
   Circle,
-  Users,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import RichTextEditor from "@/components/konten/RichTextEditor"
+import ForumSection from "@/components/forum/ForumSection"
 import { TIPE_SUBMISI_LABEL, KATEGORI_LABEL } from "@/lib/mock/data"
 import { buildEmbedUrl } from "@/lib/utils/url-parser"
 
@@ -48,16 +45,6 @@ type TahapForViewer = {
 type SubmissionForViewer = {
   isDraft: boolean
 } | null
-
-type PesanItem = {
-  id: string
-  namaPengirim: string
-  rolePengirim: "DOSEN" | "MAHASISWA" | "ADMIN"
-  isi: string
-  replyToId: string | null
-  createdAt: string
-  replies?: PesanItem[]
-}
 
 // ─── Full-width konten display ────────────────────────────────────────────────
 
@@ -191,185 +178,6 @@ function KontenDisplay({ konten }: { konten: KontenItem }) {
   )
 }
 
-// ─── Inline forum section (BERKONTRIBUSI) ────────────────────────────────────
-
-function ForumSection({
-  kontenId,
-  pesanList,
-  tahapUrutan,
-  kelompokName,
-}: {
-  kontenId: string
-  pesanList: PesanItem[]
-  tahapUrutan: number
-  kelompokName?: string | null
-}) {
-  const [replyTo, setReplyTo] = useState<string | null>(null)
-  const [input, setInput] = useState("")
-  // TODO: filter pesanList per kontenId saat forum per-konten tersedia di DB
-
-  const topLevel = pesanList.filter((p) => !p.replyToId)
-
-  function handleKirim() {
-    if (!input.trim()) return
-    setInput("")
-    setReplyTo(null)
-    // TODO: Server Action — createPesan({ kontenId, isi: input, replyToId: replyTo })
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Kelompok banner — hanya Tahap 3 (KMBM) */}
-      {tahapUrutan === 3 && kelompokName && (
-        <div className="flex items-center gap-2.5 rounded-lg bg-primary/5 border border-primary/20 px-3 py-2.5">
-          <Users className="h-4 w-4 text-primary shrink-0" />
-          <div>
-            <p className="text-xs font-semibold text-primary">{kelompokName}</p>
-            <p className="text-xs text-muted-foreground">Forum diskusi kelompok Anda</p>
-          </div>
-        </div>
-      )}
-
-      <div className="flex items-center gap-2">
-        <MessageSquare className="h-4 w-4 text-muted-foreground" />
-        <h3 className="font-semibold text-sm">Diskusi</h3>
-        <Badge variant="secondary" className="text-xs">{topLevel.length}</Badge>
-      </div>
-
-      {/* Pesan list */}
-      <div className="space-y-4">
-        {topLevel.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            Belum ada diskusi. Jadilah yang pertama berkomentar!
-          </p>
-        )}
-        {topLevel.map((pesan) => {
-          const initials = pesan.namaPengirim
-            .split(" ")
-            .slice(0, 2)
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase()
-          const replies = pesan.replies ?? []
-          return (
-            <div key={pesan.id}>
-              <div className="flex gap-3">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                    pesan.rolePengirim === "DOSEN"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {initials}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="text-sm font-medium">{pesan.namaPengirim}</span>
-                    {pesan.rolePengirim === "DOSEN" && (
-                      <Badge variant="secondary" className="text-xs py-0">Dosen</Badge>
-                    )}
-                    <span className="text-xs text-muted-foreground">{pesan.createdAt}</span>
-                  </div>
-                  <div
-                    className="rich-editor-content text-sm"
-                    dangerouslySetInnerHTML={{ __html: pesan.isi }}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs mt-1 gap-1 text-muted-foreground hover:text-foreground -ml-2"
-                    onClick={() => setReplyTo(replyTo === pesan.id ? null : pesan.id)}
-                  >
-                    <MessageSquare className="h-3.5 w-3.5" />
-                    {replyTo === pesan.id ? "Batal" : "Balas"}
-                  </Button>
-
-                  {/* Inline reply editor */}
-                  {replyTo === pesan.id && (
-                    <div className="mt-2 space-y-2">
-                      <RichTextEditor
-                        value={input}
-                        onChange={setInput}
-                        placeholder={`Balas ke ${pesan.namaPengirim}...`}
-                        minHeight="80px"
-                      />
-                      <Button size="sm" className="gap-1.5" disabled={!input.trim()} onClick={handleKirim}>
-                        Kirim Balasan
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Nested replies */}
-                  {replies.length > 0 && (
-                    <div className="mt-3 ml-2 space-y-3 border-l-2 border-muted pl-4">
-                      {replies.map((reply) => {
-                        const rInitials = reply.namaPengirim
-                          .split(" ")
-                          .slice(0, 2)
-                          .map((n) => n[0])
-                          .join("")
-                          .toUpperCase()
-                        return (
-                          <div key={reply.id} className="flex gap-3">
-                            <div
-                              className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                                reply.rolePengirim === "DOSEN"
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-muted text-muted-foreground"
-                              }`}
-                            >
-                              {rInitials}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                                <span className="text-sm font-medium">{reply.namaPengirim}</span>
-                                {reply.rolePengirim === "DOSEN" && (
-                                  <Badge variant="secondary" className="text-xs py-0">Dosen</Badge>
-                                )}
-                                <span className="text-xs text-muted-foreground">{reply.createdAt}</span>
-                              </div>
-                              <div
-                                className="rich-editor-content text-sm"
-                                dangerouslySetInnerHTML={{ __html: reply.isi }}
-                              />
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Input komentar baru (sembunyikan jika sedang reply) */}
-      {!replyTo && (
-        <>
-          <Separator />
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground font-medium">Komentar baru</p>
-            <RichTextEditor
-              value={input}
-              onChange={setInput}
-              placeholder="Tulis komentar atau pertanyaan..."
-              minHeight="100px"
-            />
-            <div className="flex justify-end">
-              <Button size="sm" className="gap-1.5" disabled={!input.trim()} onClick={handleKirim}>
-                Kirim
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
 // ─── Submission status card (SERAHKAN) ───────────────────────────────────────
 
 function SubmissionCard({
@@ -421,8 +229,8 @@ interface KontenViewerProps {
   kontenList: KontenItem[]
   tahap: TahapForViewer
   pertemuanKe: number
+  kelasId: string
   mySubmission?: SubmissionForViewer
-  pesanList?: PesanItem[]
   kelompokName?: string | null
 }
 
@@ -430,8 +238,8 @@ export default function KontenViewer({
   kontenList,
   tahap,
   pertemuanKe,
+  kelasId,
   mySubmission,
-  pesanList = [],
   kelompokName,
 }: KontenViewerProps) {
   const sorted = [...kontenList].sort((a, b) => a.urutan - b.urutan)
@@ -491,7 +299,7 @@ export default function KontenViewer({
           <CardContent className="pt-5 pb-5">
             <ForumSection
               kontenId={current.id}
-              pesanList={pesanList}
+              kelasId={kelasId}
               tahapUrutan={tahap.urutan}
               kelompokName={kelompokName}
             />

@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Plus_Jakarta_Sans } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
+import QueryProvider from "@/components/providers/QueryProvider"
 import "./globals.css"
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -25,7 +26,9 @@ export default function RootLayout({
       className={`${plusJakartaSans.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col">
-        {children}
+        <QueryProvider>
+          {children}
+        </QueryProvider>
         <Toaster richColors position="top-right" />
       </body>
     </html>

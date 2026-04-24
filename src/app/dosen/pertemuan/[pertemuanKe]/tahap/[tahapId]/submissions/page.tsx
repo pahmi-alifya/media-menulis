@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import ExportCsvButton from "@/components/submission/ExportCsvButton"
+import AssignPeerReviewButton from "@/components/assessment/AssignPeerReviewButton"
 import { auth } from "@/auth"
-import { getTahapById, getSubmissionsByTahap } from "@/server/queries/kelas.queries"
+import { getTahapById, getSubmissionsByTahap, getPeerReviewCount } from "@/server/queries/kelas.queries"
 import { TAHAP_LABEL } from "@/lib/mock/data"
 
 export default async function DosenSubmissionsPage({
@@ -24,7 +25,10 @@ export default async function DosenSubmissionsPage({
   if (!tahap) redirect(`/dosen/pertemuan/${p}`)
   if (tahap.kelas.dosenId !== session.user.id) redirect(`/dosen/pertemuan/${p}`)
 
-  const submissions = await getSubmissionsByTahap(tahapId)
+  const [submissions, peerReviewCount] = await Promise.all([
+    getSubmissionsByTahap(tahapId),
+    tahap.kode === "IMMM" ? getPeerReviewCount(tahapId) : Promise.resolve(0),
+  ])
   const final = submissions.filter((s) => !s.isDraft)
   const draft = submissions.filter((s) => s.isDraft)
 
@@ -47,9 +51,14 @@ export default async function DosenSubmissionsPage({
           </div>
         </div>
 
-        {submissions.length > 0 && (
-          <ExportCsvButton submissions={submissions} tahapKode={tahap.kode} />
-        )}
+        <div className="flex items-center gap-2">
+          {tahap.kode === "IMMM" && final.length >= 2 && (
+            <AssignPeerReviewButton tahapId={tahap.id} alreadyAssigned={peerReviewCount > 0} />
+          )}
+          {submissions.length > 0 && (
+            <ExportCsvButton submissions={submissions} tahapKode={tahap.kode} />
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3">

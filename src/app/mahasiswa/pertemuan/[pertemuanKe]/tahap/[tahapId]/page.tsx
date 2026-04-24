@@ -84,8 +84,8 @@ export default async function MahasiswaTahapDetailPage({
           kontenList={kontenList}
           tahap={tahap}
           pertemuanKe={p}
+          kelasId={tahap.kelas.id}
           mySubmission={mySubmission}
-          pesanList={[]}
           kelompokName={kelompokName}
         />
       </div>
