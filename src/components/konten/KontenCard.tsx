@@ -1,8 +1,8 @@
-import { ExternalLink, FileText, Image, Video, File } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { type MockKonten, type KontenTipe } from "@/lib/mock/data"
-import { buildEmbedUrl } from "@/lib/utils/url-parser"
+import { ExternalLink, FileText, Image, Video, File } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { type MockKonten, type KontenTipe } from "@/lib/mock/data";
+import { buildEmbedUrl, segmentTeksBody } from "@/lib/utils/url-parser";
 
 const ICON_MAP: Record<KontenTipe, React.ElementType> = {
   TEKS: FileText,
@@ -10,7 +10,7 @@ const ICON_MAP: Record<KontenTipe, React.ElementType> = {
   INFOGRAFIS: Image,
   DOKUMEN: File,
   TEMPLATE: File,
-}
+};
 
 const LABEL_MAP: Record<KontenTipe, string> = {
   TEKS: "Teks",
@@ -18,11 +18,11 @@ const LABEL_MAP: Record<KontenTipe, string> = {
   INFOGRAFIS: "Infografis",
   DOKUMEN: "Dokumen",
   TEMPLATE: "Template",
-}
+};
 
 export default function KontenCard({ konten }: { konten: MockKonten }) {
-  const Icon = ICON_MAP[konten.tipe]
-  const embed = konten.url ? buildEmbedUrl(konten.url) : null
+  const Icon = ICON_MAP[konten.tipe];
+  const embed = konten.url ? buildEmbedUrl(konten.url) : null;
 
   return (
     <div className="border rounded-lg overflow-hidden bg-card">
@@ -30,16 +30,89 @@ export default function KontenCard({ konten }: { konten: MockKonten }) {
       <div className="flex items-center gap-3 px-4 py-3 border-b bg-muted/30">
         <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
         <span className="font-medium text-sm flex-1">{konten.judul}</span>
-        <Badge variant="outline" className="text-xs">{LABEL_MAP[konten.tipe]}</Badge>
+        <Badge variant="outline" className="text-xs">
+          {LABEL_MAP[konten.tipe]}
+        </Badge>
       </div>
 
       <div className="p-4 space-y-3">
-        {/* Teks konten */}
+        {/* Teks konten — render segmen inline (embed di posisi URL) */}
         {konten.tipe === "TEKS" && konten.body && (
-          <div
-            className="rich-editor-content"
-            dangerouslySetInnerHTML={{ __html: konten.body }}
-          />
+          <div className="space-y-3">
+            {segmentTeksBody(konten.body).map((seg, i) =>
+              seg.kind === "html" ? (
+                <div
+                  key={i}
+                  className="rich-editor-content"
+                  dangerouslySetInnerHTML={{ __html: seg.html }}
+                />
+              ) : (
+                <div key={i} className="space-y-1.5">
+                  {seg.embed.type === "youtube" && (
+                    <div className="w-full aspect-video rounded-md overflow-hidden bg-muted">
+                      <iframe
+                        src={seg.embed.embedUrl}
+                        className="w-full h-full"
+                        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                        allowFullScreen
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  {(seg.embed.type === "gdrive" ||
+                    seg.embed.type === "canva") && (
+                    <div
+                      className="w-full rounded-md overflow-hidden bg-muted"
+                      style={{ minHeight: "520px" }}
+                    >
+                      <iframe
+                        src={seg.embed.embedUrl}
+                        className="w-full h-full"
+                        style={{ minHeight: "520px" }}
+                        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                        allowFullScreen
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  {seg.embed.type === "pdf" && (
+                    <div
+                      className="w-full rounded-md overflow-hidden bg-muted"
+                      style={{ minHeight: "640px" }}
+                    >
+                      <iframe
+                        src={seg.embed.embedUrl}
+                        className="w-full h-full"
+                        style={{ minHeight: "640px" }}
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  {seg.embed.type === "image" && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={seg.embed.embedUrl}
+                      alt=""
+                      className="w-full rounded-md object-contain max-h-150 bg-muted"
+                      loading="lazy"
+                    />
+                  )}
+                  <div className="flex justify-end">
+                    <a href={seg.url} target="_blank" rel="noopener noreferrer">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1.5 text-xs text-muted-foreground"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Buka di tab baru
+                      </Button>
+                    </a>
+                  </div>
+                </div>
+              ),
+            )}
+          </div>
         )}
 
         {/* Embed full-width */}
@@ -58,7 +131,10 @@ export default function KontenCard({ konten }: { konten: MockKonten }) {
             )}
 
             {(embed.type === "gdrive" || embed.type === "canva") && (
-              <div className="w-full rounded-md overflow-hidden bg-muted" style={{ minHeight: "520px" }}>
+              <div
+                className="w-full rounded-md overflow-hidden bg-muted"
+                style={{ minHeight: "520px" }}
+              >
                 <iframe
                   src={embed.embedUrl}
                   className="w-full h-full"
@@ -71,7 +147,10 @@ export default function KontenCard({ konten }: { konten: MockKonten }) {
             )}
 
             {embed.type === "pdf" && (
-              <div className="w-full rounded-md overflow-hidden bg-muted" style={{ minHeight: "640px" }}>
+              <div
+                className="w-full rounded-md overflow-hidden bg-muted"
+                style={{ minHeight: "640px" }}
+              >
                 <iframe
                   src={embed.embedUrl}
                   className="w-full h-full"
@@ -95,7 +174,11 @@ export default function KontenCard({ konten }: { konten: MockKonten }) {
             {konten.url && (
               <div className="flex justify-end">
                 <a href={konten.url} target="_blank" rel="noopener noreferrer">
-                  <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5 text-xs text-muted-foreground"
+                  >
                     <ExternalLink className="h-3.5 w-3.5" />
                     Buka di tab baru
                   </Button>
@@ -116,5 +199,5 @@ export default function KontenCard({ konten }: { konten: MockKonten }) {
         )}
       </div>
     </div>
-  )
+  );
 }

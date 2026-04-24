@@ -233,3 +233,14 @@
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+
+.rich-editor-content a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+}
+
+.rich-editor-content a:hover {
+  opacity: 0.8;
+}

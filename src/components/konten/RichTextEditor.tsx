@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState } from "react"
-import { useEditor, EditorContent } from "@tiptap/react"
-import StarterKit from "@tiptap/starter-kit"
-import Underline from "@tiptap/extension-underline"
+import { useEffect, useRef } from "react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Underline from "@tiptap/extension-underline";
 import {
   Bold,
   Italic,
@@ -20,16 +20,16 @@ import {
   Redo2,
   RemoveFormatting,
   ExternalLink,
-  X,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
-import { buildEmbedUrl, isUrl, extractUrls } from "@/lib/utils/url-parser"
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { segmentTeksBody } from "@/lib/utils/url-parser";
 
 interface RichTextEditorProps {
-  value: string
-  onChange: (html: string) => void
-  placeholder?: string
-  minHeight?: string
+  value: string;
+  onChange: (html: string) => void;
+  placeholder?: string;
+  minHeight?: string;
 }
 
 export default function RichTextEditor({
@@ -38,66 +38,44 @@ export default function RichTextEditor({
   placeholder = "Tulis isi materi di sini...",
   minHeight = "160px",
 }: RichTextEditorProps) {
-  const isExternalUpdate = useRef(false)
-  // Preview URL yang terdeteksi dari paste
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const isExternalUpdate = useRef(false);
 
   const editor = useEditor({
     extensions: [StarterKit, Underline],
     content: value,
     onUpdate: ({ editor }) => {
       if (isExternalUpdate.current) {
-        isExternalUpdate.current = false
-        return
+        isExternalUpdate.current = false;
+        return;
       }
-      const html = editor.getHTML()
-      onChange(html === "<p></p>" ? "" : html)
-
-      // Scan konten untuk URL — tampilkan preview URL terakhir yang valid
-      const text = editor.getText()
-      const urls = extractUrls(text)
-      const lastEmbeddable = [...urls].reverse().find((u) => buildEmbedUrl(u) !== null)
-      if (lastEmbeddable && lastEmbeddable !== previewUrl) {
-        setPreviewUrl(lastEmbeddable)
-      }
+      const html = editor.getHTML();
+      onChange(html === "<p></p>" ? "" : html);
     },
     editorProps: {
       attributes: {
         class: "rich-editor-content focus:outline-none",
         style: `min-height: ${minHeight}`,
       },
-      handlePaste: (_view, event) => {
-        const text = event.clipboardData?.getData("text/plain") ?? ""
-        const trimmed = text.trim()
-        // Jika yang di-paste murni sebuah URL, tampilkan preview-nya
-        if (isUrl(trimmed) && buildEmbedUrl(trimmed)) {
-          setPreviewUrl(trimmed)
-        }
-        return false // Biarkan Tiptap handle paste seperti biasa
-      },
     },
     immediatelyRender: false,
-  })
+  });
 
   // Sinkronisasi saat value berubah dari luar
   useEffect(() => {
-    if (!editor) return
-    const current = editor.getHTML()
-    const normalized = current === "<p></p>" ? "" : current
+    if (!editor) return;
+    const current = editor.getHTML();
+    const normalized = current === "<p></p>" ? "" : current;
     if (normalized !== value) {
-      isExternalUpdate.current = true
-      editor.commands.setContent(value || "")
-      // Scan ulang URL setelah konten di-set dari luar
-      const text = editor.getText()
-      const urls = extractUrls(text)
-      const lastEmbeddable = [...urls].reverse().find((u) => buildEmbedUrl(u) !== null)
-      setPreviewUrl(lastEmbeddable ?? null)
+      isExternalUpdate.current = true;
+      editor.commands.setContent(value || "");
     }
-  }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!editor) return null
+  if (!editor) return null;
 
-  const embed = previewUrl ? buildEmbedUrl(previewUrl) : null
+  // Segmentasi body untuk preview embed inline
+  const segments = value ? segmentTeksBody(value) : [];
+  const hasEmbed = segments.some((s) => s.kind === "embed");
 
   const ToolBtn = ({
     onClick,
@@ -106,11 +84,11 @@ export default function RichTextEditor({
     title,
     children,
   }: {
-    onClick: () => void
-    active?: boolean
-    disabled?: boolean
-    title: string
-    children: React.ReactNode
+    onClick: () => void;
+    active?: boolean;
+    disabled?: boolean;
+    title: string;
+    children: React.ReactNode;
   }) => (
     <button
       type="button"
@@ -122,14 +100,14 @@ export default function RichTextEditor({
         active
           ? "bg-primary text-primary-foreground"
           : "text-muted-foreground hover:text-foreground hover:bg-muted",
-        disabled && "opacity-40 cursor-not-allowed pointer-events-none"
+        disabled && "opacity-40 cursor-not-allowed pointer-events-none",
       )}
     >
       {children}
     </button>
-  )
+  );
 
-  const Sep = () => <div className="w-px h-4 bg-border mx-1 shrink-0" />
+  const Sep = () => <div className="w-px h-4 bg-border mx-1 shrink-0" />;
 
   return (
     <div className="space-y-2">
@@ -154,14 +132,18 @@ export default function RichTextEditor({
           <Sep />
 
           <ToolBtn
-            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 2 }).run()
+            }
             active={editor.isActive("heading", { level: 2 })}
             title="Judul (H2)"
           >
             <Heading2 className="h-3.5 w-3.5" />
           </ToolBtn>
           <ToolBtn
-            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 3 }).run()
+            }
             active={editor.isActive("heading", { level: 3 })}
             title="Subjudul (H3)"
           >
@@ -242,7 +224,9 @@ export default function RichTextEditor({
           <Sep />
 
           <ToolBtn
-            onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+            onClick={() =>
+              editor.chain().focus().unsetAllMarks().clearNodes().run()
+            }
             title="Hapus Pemformatan"
           >
             <RemoveFormatting className="h-3.5 w-3.5" />
@@ -260,83 +244,73 @@ export default function RichTextEditor({
         </div>
       </div>
 
-      {/* ── Preview URL yang ter-detect ── */}
-      {previewUrl && embed && (
-        <div className="border rounded-md overflow-hidden bg-muted/30">
-          {/* Preview header */}
-          <div className="flex items-center justify-between gap-2 px-3 py-2 border-b bg-muted/50">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-              <span className="text-xs text-muted-foreground truncate">Preview: {previewUrl}</span>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <a href={previewUrl} target="_blank" rel="noopener noreferrer">
-                <button
-                  type="button"
-                  className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  title="Buka di tab baru"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                </button>
-              </a>
-              <button
-                type="button"
-                onClick={() => setPreviewUrl(null)}
-                className="h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                title="Tutup preview"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          </div>
-
-          {/* Preview content */}
-          <div className="p-2">
-            {embed.type === "youtube" && (
-              <div className="w-full aspect-video rounded overflow-hidden bg-black">
-                <iframe
-                  src={embed.embedUrl}
-                  className="w-full h-full"
-                  sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-                  allowFullScreen
-                  loading="lazy"
-                />
-              </div>
-            )}
-            {(embed.type === "gdrive" || embed.type === "canva") && (
-              <div className="w-full rounded overflow-hidden" style={{ minHeight: "360px" }}>
-                <iframe
-                  src={embed.embedUrl}
-                  className="w-full"
-                  style={{ minHeight: "360px" }}
-                  sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-                  allowFullScreen
-                  loading="lazy"
-                />
-              </div>
-            )}
-            {embed.type === "pdf" && (
-              <div className="w-full rounded overflow-hidden" style={{ minHeight: "400px" }}>
-                <iframe
-                  src={embed.embedUrl}
-                  className="w-full"
-                  style={{ minHeight: "400px" }}
-                  loading="lazy"
-                />
-              </div>
-            )}
-            {embed.type === "image" && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={embed.embedUrl}
-                alt="Preview"
-                className="w-full rounded object-contain max-h-80 bg-muted"
-                loading="lazy"
+      {/* ── Preview embed inline — hanya tampil jika ada URL yang bisa di-embed ── */}
+      {hasEmbed && (
+        <div className="space-y-3 rounded-md border bg-muted/20 p-3">
+          <p className="text-xs font-medium text-muted-foreground">Preview</p>
+          {segments.map((seg, i) =>
+            seg.kind === "html" ? (
+              <div
+                key={i}
+                className="rich-editor-content"
+                dangerouslySetInnerHTML={{ __html: seg.html }}
               />
-            )}
-          </div>
+            ) : (
+              <div key={i} className="space-y-1.5">
+                {seg.embed.type === "youtube" && (
+                  <div className="w-full aspect-video rounded-md overflow-hidden bg-muted">
+                    <iframe
+                      src={seg.embed.embedUrl}
+                      className="w-full h-full"
+                      sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                      allowFullScreen
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+                {(seg.embed.type === "gdrive" ||
+                  seg.embed.type === "canva") && (
+                  <div
+                    className="w-full rounded-md overflow-hidden bg-muted"
+                    style={{ minHeight: "400px" }}
+                  >
+                    <iframe
+                      src={seg.embed.embedUrl}
+                      className="w-full h-full"
+                      style={{ minHeight: "400px" }}
+                      sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                      allowFullScreen
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+                {seg.embed.type === "pdf" && (
+                  <div
+                    className="w-full rounded-md overflow-hidden bg-muted"
+                    style={{ minHeight: "500px" }}
+                  >
+                    <iframe
+                      src={seg.embed.embedUrl}
+                      className="w-full h-full"
+                      style={{ minHeight: "500px" }}
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+                {seg.embed.type === "image" && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={seg.embed.embedUrl}
+                    alt=""
+                    className="w-full rounded-md object-contain max-h-96 bg-muted"
+                    loading="lazy"
+                  />
+                )}
+              </div>
+            ),
+          )}
         </div>
       )}
     </div>
-  )
+  );
 }

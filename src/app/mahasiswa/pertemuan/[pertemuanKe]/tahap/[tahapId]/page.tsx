@@ -1,54 +1,57 @@
-import Link from "next/link"
-import { redirect } from "next/navigation"
-import { Card, CardContent } from "@/components/ui/card"
-import TahapStepper from "@/components/tahap/TahapStepper"
-import KontenViewer from "@/components/konten/KontenViewer"
-import { auth } from "@/auth"
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { Card, CardContent } from "@/components/ui/card";
+import TahapStepper from "@/components/tahap/TahapStepper";
+import KontenViewer from "@/components/konten/KontenViewer";
+import { auth } from "@/auth";
 import {
   getTahapById,
   getKontenByTahap,
   getSubmissionByMahasiswa,
   getKelasByMahasiswa,
-} from "@/server/queries/kelas.queries"
-import { TAHAP_LABEL } from "@/lib/mock/data"
+} from "@/server/queries/kelas.queries";
+import { TAHAP_LABEL } from "@/lib/mock/data";
 
 export default async function MahasiswaTahapDetailPage({
   params,
 }: {
-  params: Promise<{ pertemuanKe: string; tahapId: string }>
+  params: Promise<{ pertemuanKe: string; tahapId: string }>;
 }) {
-  const { pertemuanKe, tahapId } = await params
-  const p = Number(pertemuanKe)
+  const { pertemuanKe, tahapId } = await params;
+  const p = Number(pertemuanKe);
 
-  const session = await auth()
-  if (!session?.user?.id) redirect("/login")
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
 
-  const userId = session.user.id
+  const userId = session.user.id;
 
   const [tahap, enrollment] = await Promise.all([
     getTahapById(tahapId),
     getKelasByMahasiswa(userId),
-  ])
+  ]);
 
-  if (!tahap || !enrollment) redirect("/mahasiswa/dashboard")
+  if (!tahap || !enrollment) redirect("/mahasiswa/dashboard");
 
   // Redirect ke halaman pertemuan jika tahap belum dibuka
-  if (!tahap.isUnlocked) redirect(`/mahasiswa/pertemuan/${p}`)
+  if (!tahap.isUnlocked) redirect(`/mahasiswa/pertemuan/${p}`);
 
   const [kontenList, mySubmission] = await Promise.all([
     getKontenByTahap(tahapId, p),
     getSubmissionByMahasiswa(tahapId, userId),
-  ])
+  ]);
 
-  const tahapList = enrollment.kelas.tahaps
-  const kelompokName = enrollment.kelompok ?? null
-  const label = TAHAP_LABEL[tahap.kode as keyof typeof TAHAP_LABEL]
+  const tahapList = enrollment.kelas.tahaps;
+  const kelompokName = enrollment.kelompok ?? null;
+  const label = TAHAP_LABEL[tahap.kode as keyof typeof TAHAP_LABEL];
 
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href={`/mahasiswa/pertemuan/${p}`} className="hover:text-foreground">
+        <Link
+          href={`/mahasiswa/pertemuan/${p}`}
+          className="hover:text-foreground"
+        >
           Pertemuan {p}
         </Link>
         <span>/</span>
@@ -90,5 +93,5 @@ export default async function MahasiswaTahapDetailPage({
         />
       </div>
     </div>
-  )
+  );
 }

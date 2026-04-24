@@ -541,7 +541,7 @@ export default function KontenManager({
                   <div className="space-y-2">
                     <Label>Pertemuan</Label>
                     <Select value={String(form.pertemuanKe)} onValueChange={(v) => setForm((f) => ({ ...f, pertemuanKe: Number(v) }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="1">Pertemuan 1</SelectItem>
                         <SelectItem value="2">Pertemuan 2</SelectItem>
@@ -553,7 +553,7 @@ export default function KontenManager({
                 <div className="space-y-2">
                   <Label>Tipe Materi</Label>
                   <Select value={form.tipe} onValueChange={(v) => setForm((f) => ({ ...f, tipe: v as KontenTipe }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="VIDEO">Video</SelectItem>
                       <SelectItem value="INFOGRAFIS">Infografis</SelectItem>
@@ -567,7 +567,7 @@ export default function KontenManager({
                 <div className="space-y-2">
                   <Label>Kategori</Label>
                   <Select value={form.kategori} onValueChange={(v) => setForm((f) => ({ ...f, kategori: v as KategoriKonten }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="LIHAT">Lihat — Materi & bacaan</SelectItem>
                       <SelectItem value="SERAHKAN">Serahkan — Tugas & pengumpulan</SelectItem>

@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
+import { useState } from "react";
+import Link from "next/link";
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,38 +13,39 @@ import {
   ChevronRight as ChevronRightIcon,
   CheckCircle2,
   Circle,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import ForumSection from "@/components/forum/ForumSection"
-import { TIPE_SUBMISI_LABEL, KATEGORI_LABEL } from "@/lib/mock/data"
-import { buildEmbedUrl } from "@/lib/utils/url-parser"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import ForumSection from "@/components/forum/ForumSection";
+import RubrikPreview from "@/components/assessment/RubrikPreview";
+import { TIPE_SUBMISI_LABEL, KATEGORI_LABEL } from "@/lib/mock/data";
+import { buildEmbedUrl, segmentTeksBody } from "@/lib/utils/url-parser";
 
 // ─── Local types (Prisma-compatible) ─────────────────────────────────────────
 
-type KontenTipe = "TEKS" | "VIDEO" | "INFOGRAFIS" | "DOKUMEN" | "TEMPLATE"
-type KategoriKonten = "LIHAT" | "SERAHKAN" | "BERKONTRIBUSI"
+type KontenTipe = "TEKS" | "VIDEO" | "INFOGRAFIS" | "DOKUMEN" | "TEMPLATE";
+type KategoriKonten = "LIHAT" | "SERAHKAN" | "BERKONTRIBUSI";
 
 type KontenItem = {
-  id: string
-  tipe: KontenTipe
-  judul: string
-  body: string | null
-  url: string | null
-  urutan: number
-  kategori: KategoriKonten
-}
+  id: string;
+  tipe: KontenTipe;
+  judul: string;
+  body: string | null;
+  url: string | null;
+  urutan: number;
+  kategori: KategoriKonten;
+};
 
 type TahapForViewer = {
-  id: string
-  urutan: number
-  tipeSubmisi: string
-}
+  id: string;
+  urutan: number;
+  tipeSubmisi: string;
+};
 
 type SubmissionForViewer = {
-  isDraft: boolean
-} | null
+  isDraft: boolean;
+} | null;
 
 // ─── Full-width konten display ────────────────────────────────────────────────
 
@@ -54,7 +55,7 @@ const ICON_MAP: Record<KontenTipe, React.ElementType> = {
   INFOGRAFIS: Image,
   DOKUMEN: File,
   TEMPLATE: File,
-}
+};
 
 const LABEL_MAP: Record<KontenTipe, string> = {
   TEKS: "Teks",
@@ -62,11 +63,11 @@ const LABEL_MAP: Record<KontenTipe, string> = {
   INFOGRAFIS: "Infografis",
   DOKUMEN: "Dokumen",
   TEMPLATE: "Template",
-}
+};
 
 function KontenDisplay({ konten }: { konten: KontenItem }) {
-  const Icon = ICON_MAP[konten.tipe]
-  const embed = konten.url ? buildEmbedUrl(konten.url) : null
+  const Icon = ICON_MAP[konten.tipe];
+  const embed = konten.url ? buildEmbedUrl(konten.url) : null;
 
   return (
     <div className="space-y-4">
@@ -76,17 +77,21 @@ function KontenDisplay({ konten }: { konten: KontenItem }) {
           <Icon className="h-4 w-4 text-muted-foreground" />
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-lg leading-tight">{konten.judul}</h2>
+          <h2 className="font-semibold text-lg leading-tight">
+            {konten.judul}
+          </h2>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <Badge variant="outline" className="text-xs">{LABEL_MAP[konten.tipe]}</Badge>
+            <Badge variant="outline" className="text-xs">
+              {LABEL_MAP[konten.tipe]}
+            </Badge>
             <Badge
               variant="outline"
               className={`text-xs ${
                 konten.kategori === "BERKONTRIBUSI"
                   ? "border-emerald-300 text-emerald-700 dark:text-emerald-400"
                   : konten.kategori === "SERAHKAN"
-                  ? "border-amber-300 text-amber-700 dark:text-amber-400"
-                  : "border-sky-300 text-sky-700 dark:text-sky-400"
+                    ? "border-amber-300 text-amber-700 dark:text-amber-400"
+                    : "border-sky-300 text-sky-700 dark:text-sky-400"
               }`}
             >
               {KATEGORI_LABEL[konten.kategori]}
@@ -95,12 +100,49 @@ function KontenDisplay({ konten }: { konten: KontenItem }) {
         </div>
       </div>
 
-      {/* Teks content */}
+      {/* Teks content — render segmen inline (embed di posisi URL) */}
       {konten.tipe === "TEKS" && konten.body && (
-        <div
-          className="rich-editor-content"
-          dangerouslySetInnerHTML={{ __html: konten.body }}
-        />
+        <div className="space-y-4">
+          {segmentTeksBody(konten.body).map((seg, i) =>
+            seg.kind === "html" ? (
+              <div
+                key={i}
+                className="rich-editor-content"
+                dangerouslySetInnerHTML={{ __html: seg.html }}
+              />
+            ) : (
+              <div key={i} className="space-y-2">
+                {seg.embed.type === "youtube" && (
+                  <div className="w-full aspect-video rounded-lg overflow-hidden bg-muted border">
+                    <iframe src={seg.embed.embedUrl} className="w-full h-full" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowFullScreen loading="lazy" />
+                  </div>
+                )}
+                {(seg.embed.type === "gdrive" || seg.embed.type === "canva") && (
+                  <div className="w-full rounded-lg overflow-hidden bg-muted border" style={{ minHeight: "600px" }}>
+                    <iframe src={seg.embed.embedUrl} className="w-full" style={{ minHeight: "600px" }} sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowFullScreen loading="lazy" />
+                  </div>
+                )}
+                {seg.embed.type === "pdf" && (
+                  <div className="w-full rounded-lg overflow-hidden bg-muted border" style={{ minHeight: "700px" }}>
+                    <iframe src={seg.embed.embedUrl} className="w-full" style={{ minHeight: "700px" }} loading="lazy" />
+                  </div>
+                )}
+                {seg.embed.type === "image" && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={seg.embed.embedUrl} alt="" className="w-full rounded-lg object-contain max-h-150 bg-muted" loading="lazy" />
+                )}
+                <div className="flex justify-end">
+                  <a href={seg.url} target="_blank" rel="noopener noreferrer">
+                    <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Buka di tab baru
+                    </Button>
+                  </a>
+                </div>
+              </div>
+            )
+          )}
+        </div>
       )}
 
       {/* Embed full-width */}
@@ -119,7 +161,10 @@ function KontenDisplay({ konten }: { konten: KontenItem }) {
           )}
 
           {(embed.type === "gdrive" || embed.type === "canva") && (
-            <div className="w-full rounded-lg overflow-hidden bg-muted border" style={{ minHeight: "600px" }}>
+            <div
+              className="w-full rounded-lg overflow-hidden bg-muted border"
+              style={{ minHeight: "600px" }}
+            >
               <iframe
                 src={embed.embedUrl}
                 className="w-full"
@@ -132,7 +177,10 @@ function KontenDisplay({ konten }: { konten: KontenItem }) {
           )}
 
           {embed.type === "pdf" && (
-            <div className="w-full rounded-lg overflow-hidden bg-muted border" style={{ minHeight: "700px" }}>
+            <div
+              className="w-full rounded-lg overflow-hidden bg-muted border"
+              style={{ minHeight: "700px" }}
+            >
               <iframe
                 src={embed.embedUrl}
                 className="w-full"
@@ -155,7 +203,11 @@ function KontenDisplay({ konten }: { konten: KontenItem }) {
           {konten.url && (
             <div className="flex justify-end">
               <a href={konten.url} target="_blank" rel="noopener noreferrer">
-                <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-xs text-muted-foreground"
+                >
                   <ExternalLink className="h-3.5 w-3.5" />
                   Buka di tab baru
                 </Button>
@@ -175,7 +227,7 @@ function KontenDisplay({ konten }: { konten: KontenItem }) {
         </a>
       )}
     </div>
-  )
+  );
 }
 
 // ─── Submission status card (SERAHKAN) ───────────────────────────────────────
@@ -185,12 +237,12 @@ function SubmissionCard({
   pertemuanKe,
   mySubmission,
 }: {
-  tahap: TahapForViewer
-  pertemuanKe: number
-  mySubmission?: SubmissionForViewer
+  tahap: TahapForViewer;
+  pertemuanKe: number;
+  mySubmission?: SubmissionForViewer;
 }) {
-  const sudahKumpul = mySubmission && !mySubmission.isDraft
-  const isDraft = mySubmission?.isDraft
+  const sudahKumpul = mySubmission && !mySubmission.isDraft;
+  const isDraft = mySubmission?.isDraft;
 
   return (
     <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
@@ -198,7 +250,11 @@ function SubmissionCard({
         <div className="flex items-center gap-2">
           <span className="font-semibold text-sm">Tugas</span>
           <Badge variant="secondary" className="text-xs">
-            {TIPE_SUBMISI_LABEL[tahap.tipeSubmisi as keyof typeof TIPE_SUBMISI_LABEL]}
+            {
+              TIPE_SUBMISI_LABEL[
+                tahap.tipeSubmisi as keyof typeof TIPE_SUBMISI_LABEL
+              ]
+            }
           </Badge>
         </div>
         {sudahKumpul ? (
@@ -213,25 +269,34 @@ function SubmissionCard({
           <Badge variant="outline">Belum dikerjakan</Badge>
         )}
       </div>
-      <Link href={`/mahasiswa/pertemuan/${pertemuanKe}/tahap/${tahap.id}/submit`}>
-        <Button variant={sudahKumpul ? "outline" : "default"} className="w-full gap-2">
-          {sudahKumpul ? "Lihat Submission Saya" : isDraft ? "Lanjutkan Mengerjakan" : "Kerjakan Tugas"}
+      <Link
+        href={`/mahasiswa/pertemuan/${pertemuanKe}/tahap/${tahap.id}/submit`}
+      >
+        <Button
+          variant={sudahKumpul ? "outline" : "default"}
+          className="w-full gap-2"
+        >
+          {sudahKumpul
+            ? "Lihat Submission Saya"
+            : isDraft
+              ? "Lanjutkan Mengerjakan"
+              : "Kerjakan Tugas"}
           <ChevronRightIcon className="h-4 w-4" />
         </Button>
       </Link>
     </div>
-  )
+  );
 }
 
 // ─── Main KontenViewer ────────────────────────────────────────────────────────
 
 interface KontenViewerProps {
-  kontenList: KontenItem[]
-  tahap: TahapForViewer
-  pertemuanKe: number
-  kelasId: string
-  mySubmission?: SubmissionForViewer
-  kelompokName?: string | null
+  kontenList: KontenItem[];
+  tahap: TahapForViewer;
+  pertemuanKe: number;
+  kelasId: string;
+  mySubmission?: SubmissionForViewer;
+  kelompokName?: string | null;
 }
 
 export default function KontenViewer({
@@ -242,37 +307,41 @@ export default function KontenViewer({
   mySubmission,
   kelompokName,
 }: KontenViewerProps) {
-  const sorted = [...kontenList].sort((a, b) => a.urutan - b.urutan)
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const sorted = [...kontenList].sort((a, b) => a.urutan - b.urutan);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   // Auto-tandai SERAHKAN items sebagai selesai jika ada final submission
   const [completedIds, setCompletedIds] = useState<Set<string>>(() => {
-    const auto = new Set<string>()
+    const auto = new Set<string>();
     if (mySubmission && !mySubmission.isDraft) {
-      sorted.filter((k) => k.kategori === "SERAHKAN").forEach((k) => auto.add(k.id))
+      sorted
+        .filter((k) => k.kategori === "SERAHKAN")
+        .forEach((k) => auto.add(k.id));
     }
-    return auto
-  })
+    return auto;
+  });
 
   if (sorted.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">Belum ada materi untuk pertemuan ini.</p>
-    )
+      <p className="text-sm text-muted-foreground">
+        Belum ada materi untuk pertemuan ini.
+      </p>
+    );
   }
 
-  const current = sorted[currentIndex]
-  const hasPrev = currentIndex > 0
-  const hasNext = currentIndex < sorted.length - 1
-  const isCompleted = completedIds.has(current.id)
-  const completedCount = completedIds.size
+  const current = sorted[currentIndex];
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex < sorted.length - 1;
+  const isCompleted = completedIds.has(current.id);
+  const completedCount = completedIds.size;
 
   function toggleComplete(id: string) {
     setCompletedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
     // TODO: Server Action — markKontenSelesai(id) / unmarkKontenSelesai(id)
   }
 
@@ -287,11 +356,14 @@ export default function KontenViewer({
 
       {/* ── Extra section berdasarkan kategori ── */}
       {current.kategori === "SERAHKAN" && (
-        <SubmissionCard
-          tahap={tahap}
-          pertemuanKe={pertemuanKe}
-          mySubmission={mySubmission}
-        />
+        <>
+          <SubmissionCard
+            tahap={tahap}
+            pertemuanKe={pertemuanKe}
+            mySubmission={mySubmission}
+          />
+          <RubrikPreview tahapUrutan={tahap.urutan} />
+        </>
       )}
 
       {current.kategori === "BERKONTRIBUSI" && (
@@ -321,8 +393,8 @@ export default function KontenViewer({
                 idx === currentIndex
                   ? "w-6 h-2.5 bg-primary"
                   : completedIds.has(k.id)
-                  ? "w-2.5 h-2.5 bg-green-500"
-                  : "w-2.5 h-2.5 bg-muted hover:bg-muted-foreground/40"
+                    ? "w-2.5 h-2.5 bg-green-500"
+                    : "w-2.5 h-2.5 bg-muted hover:bg-muted-foreground/40"
               }`}
             />
           ))}
@@ -330,7 +402,9 @@ export default function KontenViewer({
 
         {/* Counter + progres selesai */}
         <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-          <span>{currentIndex + 1} / {sorted.length} materi</span>
+          <span>
+            {currentIndex + 1} / {sorted.length} materi
+          </span>
           {completedCount > 0 && (
             <>
               <span>·</span>
@@ -369,7 +443,10 @@ export default function KontenViewer({
             variant="outline"
             className="flex-1 gap-2"
             disabled={!hasPrev}
-            onClick={() => { setCurrentIndex((i) => i - 1); window.scrollTo({ top: 0, behavior: "smooth" }) }}
+            onClick={() => {
+              setCurrentIndex((i) => i - 1);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
           >
             <ChevronLeft className="h-4 w-4" />
             Sebelumnya
@@ -378,7 +455,10 @@ export default function KontenViewer({
             variant={hasNext ? "default" : "outline"}
             className="flex-1 gap-2"
             disabled={!hasNext}
-            onClick={() => { setCurrentIndex((i) => i + 1); window.scrollTo({ top: 0, behavior: "smooth" }) }}
+            onClick={() => {
+              setCurrentIndex((i) => i + 1);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
           >
             Selanjutnya
             <ChevronRight className="h-4 w-4" />
@@ -386,5 +466,5 @@ export default function KontenViewer({
         </div>
       </div>
     </div>
-  )
+  );
 }

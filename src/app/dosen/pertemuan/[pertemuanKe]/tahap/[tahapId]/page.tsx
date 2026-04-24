@@ -24,6 +24,8 @@ export default async function DosenTahapDetailPage({
     prisma.submission.count({ where: { tahapId, isDraft: false } }),
   ])
 
+  const hasSerahkan = initialKonten.some((k) => k.kategori === "SERAHKAN")
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
@@ -41,11 +43,13 @@ export default async function DosenTahapDetailPage({
           </div>
           <p className="text-muted-foreground text-sm">Pertemuan {p}</p>
         </div>
-        <Link href={`/dosen/pertemuan/${p}/tahap/${tahap.id}/submissions`}>
-          <Button variant="outline" size="sm">
-            Submissions ({submissionCount})
-          </Button>
-        </Link>
+        {hasSerahkan && (
+          <Link href={`/dosen/pertemuan/${p}/tahap/${tahap.id}/submissions`}>
+            <Button variant="outline" size="sm">
+              Submissions ({submissionCount})
+            </Button>
+          </Link>
+        )}
       </div>
 
       <KontenManager

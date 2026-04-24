@@ -131,3 +131,114 @@ export function extractUrls(text: string): string[] {
   const matches = text.match(/https?:\/\/[^\s]+/gi)
   return matches ?? []
 }
+
+// ─── Segmentasi body TEKS untuk rendering embed inline ───────────────────────
+
+export type BodySegment =
+  | { kind: "html"; html: string }
+  | { kind: "embed"; url: string; embed: EmbedResult }
+
+/**
+ * Proses inner content sebuah <p> untuk menemukan URL embeddable.
+ * Mengembalikan posisi (start/end) setiap URL + embed result-nya.
+ */
+function findEmbeddableInInner(
+  inner: string,
+): Array<{ start: number; end: number; url: string; embed: EmbedResult }> {
+  const found: Array<{ start: number; end: number; url: string; embed: EmbedResult }> = []
+
+  // 1. Cari <a href="embeddable-url">...</a>
+  const aRx = /<a(?:\s[^>]*)?\shref="(https?:\/\/[^"]+)"[^>]*>[\s\S]*?<\/a>/gi
+  let am
+  while ((am = aRx.exec(inner)) !== null) {
+    const url = am[1].replace(/[.,;!?)>\s]+$/, "")
+    const embed = buildEmbedUrl(url)
+    if (embed) found.push({ start: am.index, end: am.index + am[0].length, url, embed })
+  }
+
+  // 2. Cari URL plain text (bukan yang sudah ada di dalam <a>)
+  // Ganti posisi <a>...</a> dengan spasi agar tidak terdeteksi ganda
+  const masked = inner.replace(/<a[^>]*>[\s\S]*?<\/a>/gi, (m) => " ".repeat(m.length))
+  const urlRx = /https?:\/\/\S+/gi
+  let um
+  while ((um = urlRx.exec(masked)) !== null) {
+    const rawUrl = um[0].replace(/[.,;!?)>]+$/, "")
+    const embed = buildEmbedUrl(rawUrl)
+    if (embed && !found.some((f) => f.start <= um!.index && um!.index < f.end)) {
+      found.push({ start: um.index, end: um.index + rawUrl.length, url: rawUrl, embed })
+    }
+  }
+
+  return found.sort((a, b) => a.start - b.start)
+}
+
+/**
+ * Konversi HTML body Tiptap (tipe TEKS) menjadi array BodySegment.
+ *
+ * Setiap URL embeddable di dalam <p> diganti embed-nya di posisi yang sama —
+ * teks sebelum URL tetap ditampilkan, URL teks dihilangkan, embed muncul di
+ * tempat URL tersebut. Block lain (ol, ul, heading, dll.) dipertahankan utuh.
+ */
+export function segmentTeksBody(html: string): BodySegment[] {
+  if (!html.trim()) return []
+
+  const segments: BodySegment[] = []
+
+  // Regex untuk menangkap top-level block elements
+  const blockRx =
+    /(<p(?:\s[^>]*)?>)([\s\S]*?)(<\/p>)|<(?:ol|ul)(?:\s[^>]*)?>[\s\S]*?<\/(?:ol|ul)>|<h[1-6](?:\s[^>]*)?>[\s\S]*?<\/h[1-6]>|<blockquote(?:\s[^>]*)?>[\s\S]*?<\/blockquote>|<hr\s*\/?>/gi
+
+  let lastIdx = 0
+  let m: RegExpExecArray | null
+
+  while ((m = blockRx.exec(html)) !== null) {
+    // Konten di antara block elements
+    if (m.index > lastIdx) {
+      const between = html.slice(lastIdx, m.index).trim()
+      if (between) segments.push({ kind: "html", html: between })
+    }
+
+    const isPTag = m[1] !== undefined && m[2] !== undefined && m[3] !== undefined
+
+    if (isPTag) {
+      // Proses <p> — pecah di posisi URL embeddable
+      const openTag = m[1]
+      const inner = m[2]
+      const closeTag = m[3]
+
+      const embeds = findEmbeddableInInner(inner)
+
+      if (embeds.length === 0) {
+        segments.push({ kind: "html", html: m[0] })
+      } else {
+        let cursor = 0
+        for (const { start, end, url, embed } of embeds) {
+          // Teks sebelum URL
+          const before = inner.slice(cursor, start)
+          if (before.replace(/<[^>]+>/g, "").trim()) {
+            segments.push({ kind: "html", html: openTag + before + closeTag })
+          }
+          // Embed menggantikan URL
+          segments.push({ kind: "embed", url, embed })
+          cursor = end
+        }
+        // Teks sesudah URL terakhir
+        const after = inner.slice(cursor)
+        if (after.replace(/<[^>]+>/g, "").trim()) {
+          segments.push({ kind: "html", html: openTag + after + closeTag })
+        }
+      }
+    } else {
+      // Block bukan <p> (ol, ul, heading, dll.) — simpan apa adanya
+      segments.push({ kind: "html", html: m[0] })
+    }
+
+    lastIdx = m.index + m[0].length
+  }
+
+  // Sisa HTML setelah block terakhir
+  const rest = html.slice(lastIdx).trim()
+  if (rest) segments.push({ kind: "html", html: rest })
+
+  return segments
+}
