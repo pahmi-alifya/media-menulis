@@ -1,33 +1,35 @@
-"use client"
+"use client";
 
-import { useTransition } from "react"
-import { toast } from "sonner"
-import { Users } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { assignPeerReviewAction } from "@/server/actions/peer-review.actions"
+import { useTransition } from "react";
+import { toast } from "sonner";
+import { Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { assignPeerReviewAction } from "@/server/actions/peer-review.actions";
 
 interface AssignPeerReviewButtonProps {
-  tahapId: string
-  alreadyAssigned: boolean
+  tahapId: string;
+  alreadyAssigned: boolean;
 }
 
 export default function AssignPeerReviewButton({
   tahapId,
   alreadyAssigned,
 }: AssignPeerReviewButtonProps) {
-  const [isPending, startTransition] = useTransition()
+  const [isPending, startTransition] = useTransition();
 
   function handleAssign() {
     startTransition(async () => {
-      const result = await assignPeerReviewAction(tahapId)
+      const result = await assignPeerReviewAction(tahapId);
       if (result.error) {
-        toast.error(result.error)
-      } else if (result.data.assigned === 0) {
-        toast.info("Semua submission sudah memiliki reviewer.")
+        toast.error(result.error);
+      } else if (result?.data?.assigned === 0) {
+        toast.info("Semua submission sudah memiliki reviewer.");
       } else {
-        toast.success(`${result.data.assigned} peer review berhasil di-assign!`)
+        toast.success(
+          `${result?.data?.assigned} peer review berhasil di-assign!`,
+        );
       }
-    })
+    });
   }
 
   return (
@@ -42,8 +44,8 @@ export default function AssignPeerReviewButton({
       {isPending
         ? "Memproses..."
         : alreadyAssigned
-        ? "Re-assign Peer Review"
-        : "Assign Peer Review"}
+          ? "Re-assign Peer Review"
+          : "Assign Peer Review"}
     </Button>
-  )
+  );
 }
