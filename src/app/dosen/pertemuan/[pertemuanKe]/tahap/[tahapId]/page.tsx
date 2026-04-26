@@ -1,10 +1,14 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import KontenManager from "@/components/konten/KontenManager";
-import { getTahapById, getKontenByTahap } from "@/server/queries/kelas.queries";
+import {
+  getTahapById,
+  getKontenByTahap,
+  getTahapsByKelas,
+} from "@/server/queries/kelas.queries";
 import { TAHAP_LABEL, TIPE_SUBMISI_LABEL } from "@/lib/mock/data";
 import { prisma } from "@/lib/prisma";
 import RubrikPreview from "@/components/assessment/RubrikPreview";
@@ -19,13 +23,17 @@ export default async function DosenTahapDetailPage({
   const tahap = await getTahapById(tahapId);
   if (!tahap) notFound();
 
-  const [initialKonten, submissionCount] = await Promise.all([
+  const [initialKonten, submissionCount, allTahaps] = await Promise.all([
     getKontenByTahap(tahapId, p),
     prisma.submission.count({ where: { tahapId, isDraft: false } }),
+    getTahapsByKelas(tahap.kelas.id),
   ]);
 
-  const hasSerahkan = initialKonten.some((k) => k.kategori === "SERAHKAN");
+  const prevTahap = allTahaps.find((t) => t.urutan === tahap.urutan - 1);
+  const nextTahap = allTahaps.find((t) => t.urutan === tahap.urutan + 1);
 
+  const hasSerahkan = initialKonten.some((k) => k.kategori === "SERAHKAN");
+  console.log("recon sini", nextTahap);
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
@@ -50,13 +58,35 @@ export default async function DosenTahapDetailPage({
           </div>
           <p className="text-muted-foreground text-sm">Pertemuan {p}</p>
         </div>
-        {hasSerahkan && (
-          <Link href={`/dosen/pertemuan/${p}/tahap/${tahap.id}/submissions`}>
-            <Button variant="outline" size="sm">
-              Submissions ({submissionCount})
-            </Button>
-          </Link>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {prevTahap && (
+            <Link href={`/dosen/pertemuan/${p}/tahap/${prevTahap.id}`}>
+              <Button variant="ghost" size="sm" className="gap-1.5">
+                <ChevronLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {`${prevTahap.urutan}: ${TAHAP_LABEL[prevTahap.kode as keyof typeof TAHAP_LABEL]?.singkat}`}
+                </span>
+              </Button>
+            </Link>
+          )}
+          {nextTahap && nextTahap.isUnlocked && (
+            <Link href={`/dosen/pertemuan/${p}/tahap/${nextTahap.id}`}>
+              <Button variant="ghost" size="sm" className="gap-1.5">
+                <span className="hidden sm:inline">
+                  {`${nextTahap.urutan}: ${TAHAP_LABEL[nextTahap.kode as keyof typeof TAHAP_LABEL]?.singkat}`}
+                </span>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          )}
+          {hasSerahkan && (
+            <Link href={`/dosen/pertemuan/${p}/tahap/${tahap.id}/submissions`}>
+              <Button variant="outline" size="sm">
+                Submissions ({submissionCount})
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       <KontenManager

@@ -26,12 +26,12 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -488,32 +488,14 @@ export default function KontenManager({
         </Card>
       )}
 
-      {/* ── Drawer Form Tambah / Edit ── */}
-      <Drawer
-        direction="right"
-        open={drawerOpen}
-        onOpenChange={(open) => {
-          if (!open) closeDrawer();
-        }}
-      >
-        <DrawerContent
-          className="
-            w-[85vw]
-            !max-w-none
-            data-[vaul-drawer-direction=right]:!max-w-none
-            overflow-y-auto
-          "
-        >
-          <DrawerHeader className="flex flex-row items-center justify-between border-b pb-4">
-            <DrawerTitle>
+      {/* ── Sheet Form Tambah / Edit ── */}
+      <Sheet open={drawerOpen} onOpenChange={(open) => { if (!open) closeDrawer(); }}>
+        <SheetContent side="right" showCloseButton={false} className="w-[85vw] sm:max-w-none! overflow-y-auto">
+          <SheetHeader className="flex flex-row items-center justify-between border-b pb-4">
+            <SheetTitle>
               {isEditing ? "Edit Materi" : "Tambah Materi"}
-            </DrawerTitle>
-            <DrawerClose asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
-                <X className="h-4 w-4" />
-              </Button>
-            </DrawerClose>
-          </DrawerHeader>
+            </SheetTitle>
+            <SheetClose render={<Button variant="ghost" size="icon" className="h-7 w-7"><X className="h-4 w-4" /></Button>} /></SheetHeader>
 
           <div className="p-4">
             <form
@@ -659,8 +641,8 @@ export default function KontenManager({
               </div>
             </form>
           </div>
-        </DrawerContent>
-      </Drawer>
+        </SheetContent>
+      </Sheet>
 
       {/* Confirm delete */}
       <AlertDialog
