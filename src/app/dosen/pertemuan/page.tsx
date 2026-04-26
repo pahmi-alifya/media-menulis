@@ -46,7 +46,7 @@ export default async function DosenPertemuanIndexPage() {
               <CardContent className="pt-5 pb-5 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-lg font-bold">Pertemuan {p.label}</p>
+                    <p className="text-lg font-bold">{p.label}</p>
                     <p className="text-sm text-muted-foreground mt-0.5">
                       5 tahap Knows SGM
                     </p>
