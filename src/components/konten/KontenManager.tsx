@@ -6,13 +6,12 @@ import {
   Plus,
   Pencil,
   Trash2,
-  X,
-  Check,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
   ChevronDown,
-  MessageSquare,
+  Check,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,8 +25,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import RichTextEditor from "@/components/konten/RichTextEditor";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,14 +42,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import RichTextEditor from "@/components/konten/RichTextEditor";
 import KontenCard from "@/components/konten/KontenCard";
+import ForumSection from "@/components/forum/ForumSection";
 import {
-  type MockPesan,
   type KontenTipe,
   type KategoriKonten,
-  type Role,
   KATEGORI_LABEL,
-  mockPesanList,
 } from "@/lib/mock/data";
 import { toast } from "sonner";
 import {
@@ -55,7 +58,6 @@ import {
   reorderKontenAction,
 } from "@/server/actions/konten.actions";
 
-// Compatible with both Prisma Konten and legacy MockKonten
 type KontenItem = {
   id: string;
   tahapId: string;
@@ -68,190 +70,11 @@ type KontenItem = {
   kategori: KategoriKonten;
 };
 
-// ─── Forum diskusi inline (hanya untuk dosen, materi BERKONTRIBUSI) ───────────
-
-function DosenForumSection({
-  kontenId,
-  pesanList,
-}: {
-  kontenId: string;
-  pesanList: MockPesan[];
-}) {
-  const [replyTo, setReplyTo] = useState<string | null>(null);
-  const [input, setInput] = useState("");
-  const [localPesan, setLocalPesan] = useState<MockPesan[]>(pesanList);
-
-  const topLevel = localPesan.filter((p) => !p.replyToId);
-
-  function doKirim(replyToId: string | null) {
-    if (!input.trim()) return;
-    const now = new Date().toLocaleString("id-ID", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    if (replyToId) {
-      setLocalPesan((prev) =>
-        prev.map((p) =>
-          p.id === replyToId
-            ? {
-                ...p,
-                replies: [
-                  ...(p.replies ?? []),
-                  {
-                    id: `r-${Date.now()}`,
-                    forumId: `f-${kontenId}`,
-                    userId: "u1",
-                    namaPengirim: "Dosen",
-                    rolePengirim: "DOSEN" as Role,
-                    isi: input,
-                    createdAt: now,
-                    replyToId,
-                  },
-                ],
-              }
-            : p,
-        ),
-      );
-    } else {
-      setLocalPesan((prev) => [
-        ...prev,
-        {
-          id: `m-${Date.now()}`,
-          forumId: `f-${kontenId}`,
-          userId: "u1",
-          namaPengirim: "Dosen",
-          rolePengirim: "DOSEN" as Role,
-          isi: input,
-          createdAt: now,
-          replyToId: null,
-        },
-      ]);
-    }
-    setInput("");
-    setReplyTo(null);
-    // TODO: Server Action — createPesan() — Fase 6
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <MessageSquare className="h-4 w-4 text-muted-foreground" />
-        <h3 className="font-semibold text-sm">Forum Diskusi</h3>
-        <Badge variant="secondary" className="text-xs">
-          {topLevel.length}
-        </Badge>
-      </div>
-
-      <div className="space-y-4">
-        {topLevel.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            Belum ada diskusi dari mahasiswa.
-          </p>
-        )}
-        {topLevel.map((pesan) => {
-          const initials = pesan.namaPengirim
-            .split(" ")
-            .slice(0, 2)
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase();
-          const replies = pesan.replies ?? [];
-
-          return (
-            <div key={pesan.id}>
-              <div className="flex gap-3">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                    pesan.rolePengirim === "DOSEN"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {initials}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="text-sm font-medium">{pesan.namaPengirim}</span>
-                    {pesan.rolePengirim === "DOSEN" && (
-                      <Badge variant="secondary" className="text-xs py-0">Dosen</Badge>
-                    )}
-                    <span className="text-xs text-muted-foreground">{pesan.createdAt}</span>
-                  </div>
-                  <div className="rich-editor-content text-sm" dangerouslySetInnerHTML={{ __html: pesan.isi }} />
-                  <Button
-                    variant="ghost" size="sm"
-                    className="h-7 text-xs mt-1 gap-1 text-muted-foreground hover:text-foreground -ml-2"
-                    onClick={() => setReplyTo(replyTo === pesan.id ? null : pesan.id)}
-                  >
-                    <MessageSquare className="h-3.5 w-3.5" />
-                    {replyTo === pesan.id ? "Batal" : "Balas"}
-                  </Button>
-
-                  {replyTo === pesan.id && (
-                    <div className="mt-2 space-y-2">
-                      <RichTextEditor value={input} onChange={setInput} placeholder={`Balas ke ${pesan.namaPengirim}...`} minHeight="80px" />
-                      <Button size="sm" className="gap-1.5" disabled={!input.trim()} onClick={() => doKirim(pesan.id)}>
-                        Kirim Balasan
-                      </Button>
-                    </div>
-                  )}
-
-                  {replies.length > 0 && (
-                    <div className="mt-3 ml-2 space-y-3 border-l-2 border-muted pl-4">
-                      {replies.map((reply) => {
-                        const rInitials = reply.namaPengirim.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
-                        return (
-                          <div key={reply.id} className="flex gap-3">
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${reply.rolePengirim === "DOSEN" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                              {rInitials}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                                <span className="text-sm font-medium">{reply.namaPengirim}</span>
-                                {reply.rolePengirim === "DOSEN" && <Badge variant="secondary" className="text-xs py-0">Dosen</Badge>}
-                                <span className="text-xs text-muted-foreground">{reply.createdAt}</span>
-                              </div>
-                              <div className="rich-editor-content text-sm" dangerouslySetInnerHTML={{ __html: reply.isi }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {!replyTo && (
-        <>
-          <Separator />
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground font-medium">Tulis komentar</p>
-            <RichTextEditor value={input} onChange={setInput} placeholder="Tulis komentar atau tanggapan kepada mahasiswa..." minHeight="100px" />
-            <div className="flex justify-end">
-              <Button size="sm" className="gap-1.5" disabled={!input.trim()} onClick={() => doKirim(null)}>
-                Kirim
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ─── KontenManager ────────────────────────────────────────────────────────────
-
 interface KontenManagerProps {
   initialKonten: KontenItem[];
   tahapId: string;
+  kelasId: string;
+  tahapUrutan: number;
   filterPertemuanKe?: number;
 }
 
@@ -267,6 +90,8 @@ type FormState = {
 export default function KontenManager({
   initialKonten,
   tahapId,
+  kelasId,
+  tahapUrutan,
   filterPertemuanKe,
 }: KontenManagerProps) {
   const router = useRouter();
@@ -290,8 +115,8 @@ export default function KontenManager({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Sync with server data after mutations
   useEffect(() => {
     const filtered = filterPertemuanKe
       ? initialKonten.filter((k) => k.pertemuanKe === filterPertemuanKe)
@@ -303,7 +128,6 @@ export default function KontenManager({
   const current = sorted[Math.min(previewIndex, sorted.length - 1)];
   const hasPrev = previewIndex > 0;
   const hasNext = previewIndex < sorted.length - 1;
-
   const isEditing = editingId !== null;
 
   const previewKonten: KontenItem | undefined = (() => {
@@ -322,11 +146,15 @@ export default function KontenManager({
     return current;
   })();
 
-  // Forum mock — pesan akan kosong untuk tahapId riil (bukan mock ID)
-  const tahapPesanList = mockPesanList.filter((p) => p.forumId === `f-${tahapId}`);
+  // ── Drawer helpers ───────────────────────────────────────────────────────────
+  function openAddDrawer() {
+    // setEditingId(null);
+    // setForm(emptyForm);
+    setDrawerOpen(true);
+  }
 
-  // ── Edit ────────────────────────────────────────────────────────────────────
-  function startEdit(konten: KontenItem) {
+  function openEditDrawer(konten: KontenItem, idx: number) {
+    setPreviewIndex(idx);
     setEditingId(konten.id);
     setForm({
       tipe: konten.tipe,
@@ -336,64 +164,17 @@ export default function KontenManager({
       body: konten.body ?? "",
       pertemuanKe: konten.pertemuanKe ?? 1,
     });
+    setDrawerOpen(true);
   }
 
-  function cancelEdit() { setEditingId(null); setForm(emptyForm); }
-
-  function saveEdit() {
-    if (!editingId || !form.judul.trim()) return;
-    startTransition(async () => {
-      const result = await updateKontenAction({
-        id: editingId,
-        tipe: form.tipe,
-        judul: form.judul,
-        body: form.body || undefined,
-        url: form.url || undefined,
-        kategori: form.kategori,
-        pertemuanKe: form.pertemuanKe,
-      });
-      if (result.error) { toast.error(result.error); return; }
-      setItems((prev) =>
-        prev.map((k) =>
-          k.id === editingId
-            ? {
-                ...k,
-                tipe: form.tipe,
-                kategori: form.kategori,
-                judul: form.judul,
-                url: form.tipe !== "TEKS" ? form.url || null : null,
-                body: form.tipe === "TEKS" ? form.body || null : null,
-                pertemuanKe: form.pertemuanKe,
-              }
-            : k,
-        ),
-      );
-      setEditingId(null);
-      setForm(emptyForm);
-      toast.success("Materi diperbarui.");
-      router.refresh();
-    });
+  function closeDrawer() {
+    setDrawerOpen(false);
+    // setEditingId(null);
+    // setForm(emptyForm);
   }
 
-  // ── Delete ──────────────────────────────────────────────────────────────────
-  function confirmDelete() {
-    if (!deleteId) return;
-    startTransition(async () => {
-      const result = await deleteKontenAction(deleteId);
-      if (result.error) { toast.error(result.error); return; }
-      setItems((prev) => {
-        const filtered = prev.filter((k) => k.id !== deleteId).map((k, i) => ({ ...k, urutan: i + 1 }));
-        setPreviewIndex((idx) => Math.min(idx, Math.max(filtered.length - 1, 0)));
-        return filtered;
-      });
-      setDeleteId(null);
-      toast.success("Materi dihapus.");
-      router.refresh();
-    });
-  }
-
-  // ── Add ─────────────────────────────────────────────────────────────────────
-  function handleAdd(e: React.FormEvent<HTMLFormElement>) {
+  // ── Save / Add ───────────────────────────────────────────────────────────────
+  function handleAdd(e: { preventDefault(): void }) {
     e.preventDefault();
     if (!form.judul.trim()) return;
     startTransition(async () => {
@@ -406,7 +187,10 @@ export default function KontenManager({
         url: form.url || undefined,
         kategori: form.kategori,
       });
-      if (result.error || !result.data) { if (result.error) toast.error(result.error); return; }
+      if (result.error || !result.data) {
+        if (result.error) toast.error(result.error);
+        return;
+      }
       const newItem: KontenItem = {
         id: result.data.id,
         tahapId,
@@ -424,7 +208,71 @@ export default function KontenManager({
         return updated;
       });
       setForm(emptyForm);
+      setDrawerOpen(false);
       toast.success("Materi ditambahkan.");
+      router.refresh();
+    });
+  }
+
+  function saveEdit() {
+    if (!editingId || !form.judul.trim()) return;
+    startTransition(async () => {
+      const result = await updateKontenAction({
+        id: editingId,
+        tipe: form.tipe,
+        judul: form.judul,
+        body: form.body || undefined,
+        url: form.url || undefined,
+        kategori: form.kategori,
+        pertemuanKe: form.pertemuanKe,
+      });
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      setItems((prev) =>
+        prev.map((k) =>
+          k.id === editingId
+            ? {
+                ...k,
+                tipe: form.tipe,
+                kategori: form.kategori,
+                judul: form.judul,
+                url: form.tipe !== "TEKS" ? form.url || null : null,
+                body: form.tipe === "TEKS" ? form.body || null : null,
+                pertemuanKe: form.pertemuanKe,
+              }
+            : k,
+        ),
+      );
+      setDrawerOpen(false);
+      setEditingId(null);
+      setForm(emptyForm);
+      toast.success("Materi diperbarui.");
+      router.refresh();
+    });
+  }
+
+  // ── Delete ───────────────────────────────────────────────────────────────────
+  function confirmDelete() {
+    if (!deleteId) return;
+    startTransition(async () => {
+      const result = await deleteKontenAction(deleteId);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      setItems((prev) => {
+        const filtered = prev
+          .filter((k) => k.id !== deleteId)
+          .map((k, i) => ({ ...k, urutan: i + 1 }));
+        setPreviewIndex((idx) =>
+          Math.min(idx, Math.max(filtered.length - 1, 0)),
+        );
+        return filtered;
+      });
+      setDeleteId(null);
+      toast.success("Materi dihapus.");
       router.refresh();
     });
   }
@@ -441,7 +289,9 @@ export default function KontenManager({
       const newIdx = renumbered.findIndex((k) => k.id === current?.id);
       if (newIdx !== -1) setPreviewIndex(newIdx);
       const orderedIds = renumbered.map((k) => k.id);
-      reorderKontenAction(orderedIds).catch(() => toast.error("Gagal mengubah urutan."));
+      reorderKontenAction(orderedIds).catch(() =>
+        toast.error("Gagal mengubah urutan."),
+      );
       return renumbered;
     });
   }
@@ -451,165 +301,95 @@ export default function KontenManager({
 
   const kategoriColor: Record<KategoriKonten, string> = {
     LIHAT: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
-    SERAHKAN: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-    BERKONTRIBUSI: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+    SERAHKAN:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+    BERKONTRIBUSI:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
   };
 
   return (
     <>
-      {/* ── Bagian 1: Preview satu item + Form ── */}
-      <div className="grid lg:grid-cols-5 gap-6">
-        {/* Panel kiri: preview */}
-        <div className="lg:col-span-3 space-y-3">
+      {/* ── Bagian 1: Preview ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
           <p className="font-semibold text-sm">Materi ({sorted.length})</p>
-
-          {sorted.length === 0 ? (
-            <Card>
-              <CardContent className="py-10 text-center text-muted-foreground text-sm">
-                Belum ada materi. Tambahkan materi di panel kanan.
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              {isLivePreview && (
-                <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                  Preview langsung — perubahan belum disimpan
-                </div>
-              )}
-
-              <div className="relative">
-                <KontenCard konten={previewKonten!} />
-              </div>
-
-              {previewKonten?.kategori === "BERKONTRIBUSI" && (
-                <Card>
-                  <CardContent className="pt-5 pb-5">
-                    <DosenForumSection key={previewKonten.id} kontenId={previewKonten.id} pesanList={tahapPesanList} />
-                  </CardContent>
-                </Card>
-              )}
-
-              <div className="flex items-center justify-center gap-1.5 flex-wrap pt-1">
-                {sorted.map((k, idx) => (
-                  <button
-                    key={k.id}
-                    type="button"
-                    onClick={() => setPreviewIndex(idx)}
-                    title={k.judul}
-                    className={`rounded-full transition-all ${
-                      idx === previewIndex
-                        ? "w-6 h-2.5 bg-primary"
-                        : "w-2.5 h-2.5 bg-muted hover:bg-muted-foreground/40"
-                    }`}
-                  />
-                ))}
-              </div>
-
-              <p className="text-center text-xs text-muted-foreground">{previewIndex + 1} / {sorted.length}</p>
-              <div className="flex gap-3">
-                <Button variant="outline" className="flex-1 gap-2" disabled={!hasPrev} onClick={() => setPreviewIndex((i) => i - 1)}>
-                  <ChevronLeft className="h-4 w-4" />Sebelumnya
-                </Button>
-                <Button variant={hasNext ? "default" : "outline"} className="flex-1 gap-2" disabled={!hasNext} onClick={() => setPreviewIndex((i) => i + 1)}>
-                  Berikutnya<ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </>
-          )}
+          <Button size="sm" className="gap-2" onClick={openAddDrawer}>
+            <Plus className="h-4 w-4" />
+            Tambah Materi
+          </Button>
         </div>
 
-        {/* Panel kanan: form tambah / edit */}
-        <div className="lg:col-span-2">
-          <Card className="sticky top-4">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">{isEditing ? "Edit Materi" : "Tambah Materi"}</CardTitle>
-                {isEditing && (
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelEdit}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <form
-                onSubmit={isEditing ? (e) => { e.preventDefault(); saveEdit(); } : handleAdd}
-                className="space-y-4"
-              >
-                {!filterPertemuanKe && (
-                  <div className="space-y-2">
-                    <Label>Pertemuan</Label>
-                    <Select value={String(form.pertemuanKe)} onValueChange={(v) => setForm((f) => ({ ...f, pertemuanKe: Number(v) }))}>
-                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">Pertemuan 1</SelectItem>
-                        <SelectItem value="2">Pertemuan 2</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label>Tipe Materi</Label>
-                  <Select value={form.tipe} onValueChange={(v) => setForm((f) => ({ ...f, tipe: v as KontenTipe }))}>
-                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="VIDEO">Video</SelectItem>
-                      <SelectItem value="INFOGRAFIS">Infografis</SelectItem>
-                      <SelectItem value="DOKUMEN">Dokumen</SelectItem>
-                      <SelectItem value="TEMPLATE">Template</SelectItem>
-                      <SelectItem value="TEKS">Teks</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Kategori</Label>
-                  <Select value={form.kategori} onValueChange={(v) => setForm((f) => ({ ...f, kategori: v as KategoriKonten }))}>
-                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="LIHAT">Lihat — Materi & bacaan</SelectItem>
-                      <SelectItem value="SERAHKAN">Serahkan — Tugas & pengumpulan</SelectItem>
-                      <SelectItem value="BERKONTRIBUSI">Berkontribusi — Diskusi forum</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Judul</Label>
-                  <Input placeholder="Judul materi" value={form.judul} onChange={(e) => setForm((f) => ({ ...f, judul: e.target.value }))} required />
-                </div>
-
-                {form.tipe !== "TEKS" ? (
-                  <div className="space-y-2">
-                    <Label>URL</Label>
-                    <Input placeholder="https://youtube.com/watch?v=..." value={form.url} onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))} type="url" />
-                    <p className="text-xs text-muted-foreground">YouTube, Google Drive, Canva, Google Docs/Slides</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label>Isi Teks</Label>
-                    <RichTextEditor value={form.body} onChange={(html) => setForm((f) => ({ ...f, body: html }))} />
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  {isEditing && (
-                    <Button type="button" variant="outline" className="flex-1" onClick={cancelEdit}>Batal</Button>
-                  )}
-                  <Button type="submit" className="flex-1 gap-2" disabled={!form.judul.trim() || isPending}>
-                    {isEditing ? (
-                      <><Check className="h-4 w-4" />{isPending ? "Menyimpan..." : "Simpan"}</>
-                    ) : (
-                      <><Plus className="h-4 w-4" />{isPending ? "Menambahkan..." : "Tambahkan"}</>
-                    )}
-                  </Button>
-                </div>
-              </form>
+        {sorted.length === 0 ? (
+          <Card>
+            <CardContent className="py-10 text-center text-muted-foreground text-sm">
+              Belum ada materi. Klik &ldquo;Tambah Materi&rdquo; untuk memulai.
             </CardContent>
           </Card>
-        </div>
+        ) : (
+          <>
+            {isLivePreview && (
+              <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                Preview langsung — perubahan belum disimpan
+              </div>
+            )}
+
+            <KontenCard konten={previewKonten!} />
+
+            {previewKonten?.kategori === "BERKONTRIBUSI" && (
+              <Card>
+                <CardContent className="pt-5 pb-5">
+                  <ForumSection
+                    key={previewKonten.id}
+                    kontenId={previewKonten.id}
+                    kelasId={kelasId}
+                    tahapUrutan={tahapUrutan}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="flex items-center justify-center gap-1.5 flex-wrap pt-1">
+              {sorted.map((k, idx) => (
+                <button
+                  key={k.id}
+                  type="button"
+                  onClick={() => setPreviewIndex(idx)}
+                  title={k.judul}
+                  className={`rounded-full transition-all ${
+                    idx === previewIndex
+                      ? "w-6 h-2.5 bg-primary"
+                      : "w-2.5 h-2.5 bg-muted hover:bg-muted-foreground/40"
+                  }`}
+                />
+              ))}
+            </div>
+
+            <p className="text-center text-xs text-muted-foreground">
+              {previewIndex + 1} / {sorted.length}
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1 gap-2"
+                disabled={!hasPrev}
+                onClick={() => setPreviewIndex((i) => i - 1)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Sebelumnya
+              </Button>
+              <Button
+                variant={hasNext ? "default" : "outline"}
+                className="flex-1 gap-2"
+                disabled={!hasNext}
+                onClick={() => setPreviewIndex((i) => i + 1)}
+              >
+                Berikutnya
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Bagian 2: Urutan Materi ── */}
@@ -618,7 +398,8 @@ export default function KontenManager({
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Urutan Materi</CardTitle>
             <p className="text-xs text-muted-foreground">
-              Gunakan tombol ▲/▼ untuk mengatur urutan tampilan materi bagi mahasiswa.
+              Gunakan tombol ▲/▼ untuk mengatur urutan tampilan materi bagi
+              mahasiswa.
             </p>
           </CardHeader>
           <CardContent className="space-y-1.5">
@@ -626,10 +407,14 @@ export default function KontenManager({
               <div
                 key={konten.id}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-colors ${
-                  current?.id === konten.id ? "bg-primary/5 border-primary/30" : "bg-card hover:bg-accent/40"
+                  current?.id === konten.id
+                    ? "bg-primary/5 border-primary/30"
+                    : "bg-card hover:bg-accent/40"
                 }`}
               >
-                <span className="text-xs font-mono text-muted-foreground w-5 text-center shrink-0">{konten.urutan}</span>
+                <span className="text-xs font-mono text-muted-foreground w-5 text-center shrink-0">
+                  {konten.urutan}
+                </span>
 
                 <button
                   type="button"
@@ -640,26 +425,60 @@ export default function KontenManager({
                   {konten.judul}
                 </button>
 
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 hidden sm:inline ${kategoriColor[konten.kategori]}`}>
+                <span
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 hidden sm:inline ${kategoriColor[konten.kategori]}`}
+                >
                   {KATEGORI_LABEL[konten.kategori]}
                 </span>
 
-                <Badge variant="outline" className="text-[10px] shrink-0">P{konten.pertemuanKe}</Badge>
+                <Badge variant="outline" className="text-[10px] shrink-0">
+                  P{konten.pertemuanKe}
+                </Badge>
 
                 <div className="flex gap-0.5 shrink-0">
-                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => { startEdit(konten); setPreviewIndex(idx); }} title="Edit">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                    onClick={() => openEditDrawer(konten, idx)}
+                    title="Edit"
+                  >
                     <Pencil className="h-3 w-3" />
                   </Button>
-                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => setDeleteId(konten.id)} title="Hapus">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                    onClick={() => setDeleteId(konten.id)}
+                    title="Hapus"
+                  >
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
 
                 <div className="flex flex-col gap-0.5 shrink-0">
-                  <Button type="button" variant="ghost" size="icon" className="h-5 w-6" disabled={idx === 0} onClick={() => moveItem(konten.id, "up")} title="Naikan urutan">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-6"
+                    disabled={idx === 0}
+                    onClick={() => moveItem(konten.id, "up")}
+                    title="Naikan urutan"
+                  >
                     <ChevronUp className="h-3.5 w-3.5" />
                   </Button>
-                  <Button type="button" variant="ghost" size="icon" className="h-5 w-6" disabled={idx === sorted.length - 1} onClick={() => moveItem(konten.id, "down")} title="Turunkan urutan">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-6"
+                    disabled={idx === sorted.length - 1}
+                    onClick={() => moveItem(konten.id, "down")}
+                    title="Turunkan urutan"
+                  >
                     <ChevronDown className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -669,18 +488,202 @@ export default function KontenManager({
         </Card>
       )}
 
+      {/* ── Drawer Form Tambah / Edit ── */}
+      <Drawer
+        direction="right"
+        open={drawerOpen}
+        onOpenChange={(open) => {
+          if (!open) closeDrawer();
+        }}
+      >
+        <DrawerContent
+          className="
+            w-[85vw]
+            !max-w-none
+            data-[vaul-drawer-direction=right]:!max-w-none
+            overflow-y-auto
+          "
+        >
+          <DrawerHeader className="flex flex-row items-center justify-between border-b pb-4">
+            <DrawerTitle>
+              {isEditing ? "Edit Materi" : "Tambah Materi"}
+            </DrawerTitle>
+            <DrawerClose asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <X className="h-4 w-4" />
+              </Button>
+            </DrawerClose>
+          </DrawerHeader>
+
+          <div className="p-4">
+            <form
+              onSubmit={
+                isEditing
+                  ? (e) => {
+                      e.preventDefault();
+                      saveEdit();
+                    }
+                  : handleAdd
+              }
+              className="space-y-4"
+            >
+              {!filterPertemuanKe && (
+                <div className="space-y-2">
+                  <Label>Pertemuan</Label>
+                  <Select
+                    value={String(form.pertemuanKe)}
+                    onValueChange={(v) =>
+                      setForm((f) => ({ ...f, pertemuanKe: Number(v) }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Pertemuan 1</SelectItem>
+                      <SelectItem value="2">Pertemuan 2</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Tipe Materi</Label>
+                <Select
+                  value={form.tipe}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, tipe: v as KontenTipe }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="VIDEO">Video</SelectItem>
+                    <SelectItem value="INFOGRAFIS">Infografis</SelectItem>
+                    <SelectItem value="DOKUMEN">Dokumen</SelectItem>
+                    <SelectItem value="TEMPLATE">Template</SelectItem>
+                    <SelectItem value="TEKS">Teks</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Kategori</Label>
+                <Select
+                  value={form.kategori}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, kategori: v as KategoriKonten }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="LIHAT">
+                      Lihat — Materi &amp; bacaan
+                    </SelectItem>
+                    <SelectItem value="SERAHKAN">
+                      Serahkan — Tugas &amp; pengumpulan
+                    </SelectItem>
+                    <SelectItem value="BERKONTRIBUSI">
+                      Berkontribusi — Diskusi forum
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Judul</Label>
+                <Input
+                  placeholder="Judul materi"
+                  value={form.judul}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, judul: e.target.value }))
+                  }
+                  required
+                />
+              </div>
+
+              {form.tipe !== "TEKS" ? (
+                <div className="space-y-2">
+                  <Label>URL</Label>
+                  <Input
+                    placeholder="https://youtube.com/watch?v=..."
+                    value={form.url}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, url: e.target.value }))
+                    }
+                    type="url"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    YouTube, Google Drive, Canva, Google Docs/Slides
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Isi Teks</Label>
+                  <RichTextEditor
+                    value={form.body}
+                    onChange={(html) => setForm((f) => ({ ...f, body: html }))}
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={closeDrawer}
+                >
+                  Batal
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 gap-2"
+                  disabled={!form.judul.trim() || isPending}
+                >
+                  {isEditing ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      {isPending ? "Menyimpan..." : "Simpan"}
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" />
+                      {isPending ? "Menambahkan..." : "Tambahkan"}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </DrawerContent>
+      </Drawer>
+
       {/* Confirm delete */}
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+      <AlertDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus Materi?</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>"{deletingItem?.judul}"</strong> akan dihapus permanen dan tidak bisa dipulihkan.
+              <strong>&ldquo;{deletingItem?.judul}&rdquo;</strong> akan dihapus
+              permanen dan tidak bisa dipulihkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDeleteId(null)}>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} disabled={isPending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogCancel onClick={() => setDeleteId(null)}>
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               {isPending ? "Menghapus..." : "Hapus"}
             </AlertDialogAction>
           </AlertDialogFooter>

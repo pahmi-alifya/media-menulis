@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import RichTextEditor from "@/components/konten/RichTextEditor"
 import { sendPesanAction } from "@/server/actions/forum.actions"
+import { formatTanggal, makeInitials, sanitizeHtml } from "@/lib/utils/forum-helpers"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,37 +29,6 @@ type PesanItem = {
   replies: ReplyItem[]
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatTanggal(iso: string) {
-  return new Date(iso).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-}
-
-function initials(nama: string) {
-  return nama
-    .split(" ")
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-}
-
-function sanitizeHtml(html: string): string {
-  if (typeof window === "undefined") return html
-  // strip script tags & event handlers — lightweight guard tanpa library
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/\son\w+="[^"]*"/gi, "")
-    .replace(/\son\w+='[^']*'/gi, "")
-    .replace(/javascript:/gi, "")
-}
-
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
 function Avatar({ nama, role, size = "md" }: { nama: string; role: string; size?: "sm" | "md" }) {
@@ -66,7 +36,7 @@ function Avatar({ nama, role, size = "md" }: { nama: string; role: string; size?
   const bg = role === "DOSEN" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
   return (
     <div className={`${dim} ${bg} rounded-full flex items-center justify-center font-bold shrink-0`}>
-      {initials(nama)}
+      {makeInitials(nama)}
     </div>
   )
 }

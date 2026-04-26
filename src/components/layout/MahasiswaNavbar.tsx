@@ -6,12 +6,17 @@ import { GraduationCap, LayoutDashboard, LogOut, Menu, X, KeyRound } from "lucid
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { makeInitials } from "@/lib/utils/forum-helpers"
 
 const navItems = [
   { href: "/mahasiswa/dashboard", label: "Dashboard", icon: LayoutDashboard },
 ]
 
-export default function MahasiswaNavbar() {
+interface MahasiswaNavbarProps {
+  userName: string
+}
+
+export default function MahasiswaNavbar({ userName }: MahasiswaNavbarProps) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -52,10 +57,10 @@ export default function MahasiswaNavbar() {
         <div className="flex items-center gap-2">
           <div className="hidden md:flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-              AF
+              {makeInitials(userName)}
             </div>
             <div className="text-right">
-              <p className="text-sm font-medium leading-none">Ahmad Fauzi</p>
+              <p className="text-sm font-medium leading-none">{userName}</p>
               <p className="text-xs text-muted-foreground mt-0.5">Mahasiswa</p>
             </div>
           </div>
@@ -106,7 +111,7 @@ export default function MahasiswaNavbar() {
           })}
           <div className="pt-2 mt-1 border-t flex items-center justify-between px-3 py-2">
             <div>
-              <p className="text-sm font-medium">Ahmad Fauzi</p>
+              <p className="text-sm font-medium">{userName}</p>
               <p className="text-xs text-muted-foreground">Mahasiswa</p>
             </div>
             <div className="flex gap-1">
