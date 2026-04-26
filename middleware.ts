@@ -1,6 +1,9 @@
-import { auth } from "./src/auth"
+import NextAuth from "next-auth"
+import { authConfig } from "./src/auth.config"
 import { NextResponse } from "next/server"
 import type { Role } from "@prisma/client"
+
+const { auth } = NextAuth(authConfig)
 
 const ROLE_DASHBOARD: Record<Role, string> = {
   DOSEN: "/dosen/dashboard",
