@@ -15,6 +15,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { makeInitials } from "@/lib/utils/forum-helpers";
+import { logoutAction } from "@/server/actions/auth.actions";
 
 const navItems = [
   { href: "/dosen/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -98,13 +99,15 @@ function NavContent({ onClose, userName }: { onClose?: () => void; userName: str
           <KeyRound className="h-4 w-4 shrink-0" />
           Ganti Sandi
         </Link>
-        <Link
-          href="/login"
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-indigo-300/60 hover:bg-white/8 hover:text-indigo-200 transition-all"
-        >
-          <LogOut className="h-4 w-4 shrink-0" />
-          Keluar
-        </Link>
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-indigo-300/60 hover:bg-white/8 hover:text-indigo-200 transition-all"
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            Keluar
+          </button>
+        </form>
       </div>
     </div>
   );

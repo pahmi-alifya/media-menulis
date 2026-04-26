@@ -1,9 +1,9 @@
-import Link from "next/link"
 import { redirect } from "next/navigation"
 import { GraduationCap, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { auth } from "@/auth"
 import { makeInitials } from "@/lib/utils/forum-helpers"
+import { logoutAction } from "@/server/actions/auth.actions"
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -29,12 +29,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               </div>
               <span className="text-sm font-medium hidden sm:block">{userName}</span>
             </div>
-            <Link href="/login">
-              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
+            <form action={logoutAction}>
+              <Button variant="ghost" size="sm" type="submit" className="gap-1.5 text-muted-foreground hover:text-foreground">
                 <LogOut className="h-4 w-4" />
                 Keluar
               </Button>
-            </Link>
+            </form>
           </div>
         </div>
       </header>

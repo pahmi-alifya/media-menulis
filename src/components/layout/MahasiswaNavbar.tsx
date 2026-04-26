@@ -7,6 +7,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { makeInitials } from "@/lib/utils/forum-helpers"
+import { logoutAction } from "@/server/actions/auth.actions"
 
 const navItems = [
   { href: "/mahasiswa/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -70,12 +71,12 @@ export default function MahasiswaNavbar({ userName }: MahasiswaNavbarProps) {
               Ganti Sandi
             </Button>
           </Link>
-          <Link href="/login" className="hidden md:block">
-            <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
+          <form action={logoutAction} className="hidden md:block">
+            <Button variant="ghost" size="sm" type="submit" className="gap-1.5 text-muted-foreground hover:text-foreground">
               <LogOut className="h-4 w-4" />
               Keluar
             </Button>
-          </Link>
+          </form>
 
           <Button
             variant="ghost"
@@ -121,12 +122,12 @@ export default function MahasiswaNavbar({ userName }: MahasiswaNavbarProps) {
                   Ganti Sandi
                 </Button>
               </Link>
-              <Link href="/login" onClick={() => setMobileOpen(false)}>
-                <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+              <form action={logoutAction}>
+                <Button variant="ghost" size="sm" type="submit" className="gap-1.5 text-muted-foreground">
                   <LogOut className="h-4 w-4" />
                   Keluar
                 </Button>
-              </Link>
+              </form>
             </div>
           </div>
         </div>
