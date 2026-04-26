@@ -1,12 +1,27 @@
 import { prisma } from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 
-export async function getKelasByDosen(dosenId: string) {
+const kelasByDosenArgs = {
+  include: {
+    tahaps: { orderBy: { urutan: "asc" } as const },
+    _count: { select: { enrollments: true } },
+  },
+} satisfies Prisma.KelasDefaultArgs
+
+const kelasByMahasiswaArgs = {
+  include: {
+    tahaps: { orderBy: { urutan: "asc" } as const },
+    dosen: { select: { nama: true } },
+  },
+} satisfies Prisma.KelasDefaultArgs
+
+export type KelasByDosen = Prisma.KelasGetPayload<typeof kelasByDosenArgs>
+export type KelasByMahasiswa = Prisma.KelasGetPayload<typeof kelasByMahasiswaArgs>
+
+export async function getKelasByDosen(dosenId: string): Promise<KelasByDosen | null> {
   return prisma.kelas.findFirst({
     where: { dosenId },
-    include: {
-      tahaps: { orderBy: { urutan: "asc" } },
-      _count: { select: { enrollments: true } },
-    },
+    ...kelasByDosenArgs,
     orderBy: { createdAt: "desc" },
   })
 }
@@ -46,14 +61,7 @@ export async function getEnrollmentsByKelas(kelasId: string) {
 export async function getKelasByMahasiswa(userId: string) {
   return prisma.enrollment.findFirst({
     where: { userId },
-    include: {
-      kelas: {
-        include: {
-          tahaps: { orderBy: { urutan: "asc" } },
-          dosen: { select: { nama: true } },
-        },
-      },
-    },
+    include: { kelas: { ...kelasByMahasiswaArgs } },
     orderBy: { joinedAt: "asc" },
   })
 }
