@@ -1,20 +1,30 @@
-import Link from "next/link"
-import { redirect } from "next/navigation"
-import { auth } from "@/auth"
-import { getKelasByDosen, getTahapsByKelas } from "@/server/queries/kelas.queries"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import ModelPembelajaranBanner from "@/components/kelas/ModelPembelajaranBanner"
-import EditableNamaKelas from "@/components/kelas/EditableNamaKelas"
-import { TAHAP_LABEL } from "@/lib/mock/data"
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+import {
+  getKelasByDosen,
+  getTahapsByKelas,
+} from "@/server/queries/kelas.queries";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import ModelPembelajaranBanner from "@/components/kelas/ModelPembelajaranBanner";
+import EditableNamaKelas from "@/components/kelas/EditableNamaKelas";
+import { TAHAP_LABEL } from "@/lib/mock/data";
+
+const pertemuanMeta = [
+  { ke: 1, label: "Esai: Siklus Know SGM 1" },
+  { ke: 2, label: "Esai: Siklus Knoes SGM 2" },
+];
 
 export default async function DosenPertemuanIndexPage() {
-  const session = await auth()
-  const kelas = session?.user?.id ? await getKelasByDosen(session.user.id) : null
-  if (!kelas) redirect("/dosen/dashboard")
+  const session = await auth();
+  const kelas = session?.user?.id
+    ? await getKelasByDosen(session.user.id)
+    : null;
+  if (!kelas) redirect("/dosen/dashboard");
 
-  const tahapList = await getTahapsByKelas(kelas.id)
-  const unlockedCount = tahapList.filter((t) => t.isUnlocked).length
+  const tahapList = await getTahapsByKelas(kelas.id);
+  const unlockedCount = tahapList.filter((t) => t.isUnlocked).length;
 
   return (
     <div className="p-6 space-y-6">
@@ -25,17 +35,21 @@ export default async function DosenPertemuanIndexPage() {
         </p>
       </div>
 
-      <ModelPembelajaranBanner initialLink={kelas.linkModelPembelajaran ?? null} />
+      <ModelPembelajaranBanner
+        initialLink={kelas.linkModelPembelajaran ?? null}
+      />
 
       <div className="grid sm:grid-cols-2 gap-4">
-        {([1, 2] as const).map((p) => (
-          <Link key={p} href={`/dosen/pertemuan/${p}`}>
+        {pertemuanMeta.map((p) => (
+          <Link key={p.ke} href={`/dosen/pertemuan/${p.ke}`}>
             <Card className="hover:border-primary/50 hover:bg-accent/30 transition-colors cursor-pointer h-full">
               <CardContent className="pt-5 pb-5 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-lg font-bold">Pertemuan {p}</p>
-                    <p className="text-sm text-muted-foreground mt-0.5">5 tahap Knows SGM</p>
+                    <p className="text-lg font-bold">Pertemuan {p.label}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      5 tahap Knows SGM
+                    </p>
                   </div>
                   <Badge variant="secondary" className="shrink-0">
                     {unlockedCount} / 5 terbuka
@@ -51,7 +65,8 @@ export default async function DosenPertemuanIndexPage() {
                           : "bg-muted text-muted-foreground border-transparent"
                       }`}
                     >
-                      {TAHAP_LABEL[t.kode as keyof typeof TAHAP_LABEL]?.singkat ?? t.kode}
+                      {TAHAP_LABEL[t.kode as keyof typeof TAHAP_LABEL]
+                        ?.singkat ?? t.kode}
                     </span>
                   ))}
                 </div>
@@ -61,5 +76,5 @@ export default async function DosenPertemuanIndexPage() {
         ))}
       </div>
     </div>
-  )
+  );
 }
