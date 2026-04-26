@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { auth } from "@/auth"
 import { getKelasByMahasiswa } from "@/server/queries/kelas.queries"
 import JoinKelasForm from "@/components/mahasiswa/JoinKelasForm"
+import { buildEmbedUrl } from "@/lib/utils/url-parser"
 
 export default async function MahasiswaDashboardPage() {
   const session = await auth()
@@ -22,6 +23,26 @@ export default async function MahasiswaDashboardPage() {
             <span className="font-medium text-foreground">{kelas.nama}</span>
             <Badge variant="outline" className="font-mono text-xs">{kelas.kode}</Badge>
           </div>
+
+          {/* Panduan penggunaan aplikasi */}
+          {kelas.linkPanduanMahasiswa && (() => {
+            const embed = buildEmbedUrl(kelas.linkPanduanMahasiswa)
+            return (
+              <div className="space-y-2">
+                <h2 className="text-lg font-semibold">Panduan Penggunaan Aplikasi</h2>
+                <div className="w-full rounded-lg overflow-hidden bg-muted border" style={{ minHeight: "600px" }}>
+                  <iframe
+                    src={embed?.embedUrl ?? kelas.linkPanduanMahasiswa}
+                    className="w-full"
+                    style={{ minHeight: "600px" }}
+                    sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                    allowFullScreen
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Pertemuan cards */}
           <div>

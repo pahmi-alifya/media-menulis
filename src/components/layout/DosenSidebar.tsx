@@ -10,6 +10,7 @@ import {
   X,
   GraduationCap,
   KeyRound,
+  BookOpen,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ import { logoutAction } from "@/server/actions/auth.actions";
 
 const navItems = [
   { href: "/dosen/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dosen/pertemuan", label: "Pertemuan", icon: BookOpen },
   { href: "/dosen/mahasiswa", label: "Mahasiswa", icon: Users },
 ];
 

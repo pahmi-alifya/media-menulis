@@ -79,16 +79,18 @@ model User {
 }
 
 model Kelas {
-  id          String       @id @default(cuid())
-  nama        String
-  deskripsi   String?
-  kode        String       @unique
-  dosenId     String
-  dosen       User         @relation(fields: [dosenId], references: [id])
-  createdAt   DateTime     @default(now())
-  tahaps      Tahap[]
-  enrollments Enrollment[]
-  forums      Forum[]
+  id                    String       @id @default(cuid())
+  nama                  String
+  deskripsi             String?
+  kode                  String       @unique
+  dosenId               String
+  dosen                 User         @relation(fields: [dosenId], references: [id])
+  createdAt             DateTime     @default(now())
+  linkModelPembelajaran String?
+  linkPanduanMahasiswa  String?
+  tahaps                Tahap[]
+  enrollments           Enrollment[]
+  forums                Forum[]
 }
 
 model Tahap {

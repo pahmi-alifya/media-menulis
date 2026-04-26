@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { auth } from "@/auth";
 import { getKelasByDosen } from "@/server/queries/kelas.queries";
 import BuatKelasDialog from "@/components/dosen/BuatKelasDialog";
+import PanduanMahasiswaEditor from "@/components/kelas/PanduanMahasiswaEditor";
 
 const pertemuanMeta = [
   { ke: 1, label: "Pertemuan 1" },
@@ -92,8 +93,11 @@ export default async function DosenDashboardPage() {
             </Badge>
           </div>
 
+          {/* Panduan mahasiswa */}
+          <PanduanMahasiswaEditor initialLink={kelas.linkPanduanMahasiswa ?? null} />
+
           {/* Pertemuan */}
-          <div>
+          {/* <div>
             <h2 className="font-semibold mb-3">Pertemuan</h2>
             <div className="grid sm:grid-cols-2 gap-4">
               {pertemuanMeta.map((p) => (
@@ -123,17 +127,17 @@ export default async function DosenDashboardPage() {
                 </Card>
               ))}
             </div>
-          </div>
+          </div> */}
 
           {/* Quick links */}
-          <div className="flex gap-3">
+          {/* <div className="flex gap-3">
             <Link href="/dosen/mahasiswa" className="flex-1">
               <Button variant="outline" className="w-full gap-2">
                 <Users className="h-4 w-4" />
                 Mahasiswa
               </Button>
             </Link>
-          </div>
+          </div> */}
         </>
       ) : (
         /* Empty state — belum ada kelas */

@@ -95,3 +95,56 @@ export async function unlockTahapAction(tahapId: string): Promise<Result> {
   revalidatePath("/dosen/pertemuan/2")
   return { data: undefined, error: null }
 }
+
+export async function updateLinkPanduanMahasiswaAction(link: string): Promise<Result> {
+  const session = await auth()
+  if (!session?.user?.id) return { data: null, error: "Tidak terautentikasi." }
+
+  const kelas = await prisma.kelas.findFirst({ where: { dosenId: session.user.id } })
+  if (!kelas) return { data: null, error: "Kelas tidak ditemukan." }
+
+  await prisma.kelas.update({
+    where: { id: kelas.id },
+    data: { linkPanduanMahasiswa: link.trim() || null },
+  })
+
+  revalidatePath("/dosen/dashboard")
+  revalidatePath("/mahasiswa/dashboard")
+  return { data: undefined, error: null }
+}
+
+export async function updateNamaKelasAction(nama: string): Promise<Result> {
+  const session = await auth()
+  if (!session?.user?.id) return { data: null, error: "Tidak terautentikasi." }
+  if (!nama.trim()) return { data: null, error: "Nama kelas wajib diisi." }
+
+  const kelas = await prisma.kelas.findFirst({ where: { dosenId: session.user.id } })
+  if (!kelas) return { data: null, error: "Kelas tidak ditemukan." }
+
+  await prisma.kelas.update({ where: { id: kelas.id }, data: { nama: nama.trim() } })
+
+  revalidatePath("/dosen/pertemuan")
+  revalidatePath("/dosen/pertemuan/1")
+  revalidatePath("/dosen/pertemuan/2")
+  revalidatePath("/dosen/dashboard")
+  return { data: undefined, error: null }
+}
+
+export async function updateLinkModelPembelajaranAction(
+  link: string,
+): Promise<Result> {
+  const session = await auth()
+  if (!session?.user?.id) return { data: null, error: "Tidak terautentikasi." }
+
+  const kelas = await prisma.kelas.findFirst({ where: { dosenId: session.user.id } })
+  if (!kelas) return { data: null, error: "Kelas tidak ditemukan." }
+
+  await prisma.kelas.update({
+    where: { id: kelas.id },
+    data: { linkModelPembelajaran: link.trim() || null },
+  })
+
+  revalidatePath("/dosen/pertemuan/1")
+  revalidatePath("/dosen/pertemuan/2")
+  return { data: undefined, error: null }
+}
