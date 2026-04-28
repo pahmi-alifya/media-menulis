@@ -8,7 +8,7 @@ export const loginSchema = z.object({
 export const registerSchema = z
   .object({
     nama: z.string().min(2, "Nama minimal 2 karakter.").max(100, "Nama terlalu panjang."),
-    nim: z.string().optional(),
+    nim: z.string().min(1, "NIM/NPM wajib diisi."),
     email: z.string().email("Format email tidak valid."),
     password: z.string().min(8, "Kata sandi minimal 8 karakter."),
     konfirmasi: z.string(),

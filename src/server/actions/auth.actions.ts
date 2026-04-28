@@ -31,7 +31,7 @@ export async function loginAction(email: string, password: string): Promise<Acti
 
 export async function registerMahasiswaAction(input: {
   nama: string
-  nim?: string
+  nim: string
   email: string
   password: string
   konfirmasi: string
@@ -55,7 +55,7 @@ export async function registerMahasiswaAction(input: {
   await prisma.user.create({
     data: {
       nama,
-      nim: nim || null,
+      nim,
       email: email.toLowerCase(),
       password: hashed,
       role: "MAHASISWA",

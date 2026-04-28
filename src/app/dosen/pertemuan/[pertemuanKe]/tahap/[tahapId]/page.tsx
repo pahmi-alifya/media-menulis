@@ -33,7 +33,7 @@ export default async function DosenTahapDetailPage({
   const nextTahap = allTahaps.find((t) => t.urutan === tahap.urutan + 1);
 
   const hasSerahkan = initialKonten.some((k) => k.kategori === "SERAHKAN");
-  console.log("recon sini", nextTahap);
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">

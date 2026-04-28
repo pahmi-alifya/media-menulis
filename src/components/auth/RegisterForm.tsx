@@ -46,12 +46,7 @@ export default function RegisterForm() {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="nim">
-          NIM
-          <span className="text-muted-foreground font-normal ml-1 text-xs">
-            (opsional)
-          </span>
-        </Label>
+        <Label htmlFor="nim">NIM / NPM</Label>
         <Input
           id="nim"
           placeholder="Nomor Induk Mahasiswa"
