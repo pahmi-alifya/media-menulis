@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Plus_Jakarta_Sans } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
 import QueryProvider from "@/components/providers/QueryProvider"
+import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -30,6 +31,7 @@ export default function RootLayout({
           {children}
         </QueryProvider>
         <Toaster richColors position="top-right" />
+        <Analytics />
       </body>
     </html>
   )
