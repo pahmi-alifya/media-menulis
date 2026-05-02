@@ -32,7 +32,7 @@ export default async function DosenDashboardPage() {
   const namaDosen = session?.user?.name ?? "Dosen";
 
   return (
-    <div className="p-6 md:p-8 space-y-8">
+    <div className="p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8">
       {/* Header */}
       <div>
         <p className="text-sm text-muted-foreground mb-1">
@@ -52,7 +52,7 @@ export default async function DosenDashboardPage() {
                     <p className="text-primary-foreground/70 text-xs font-medium uppercase tracking-wide">
                       Mahasiswa
                     </p>
-                    <p className="text-4xl font-bold mt-1">{totalMahasiswa}</p>
+                    <p className="text-3xl sm:text-4xl font-bold mt-1">{totalMahasiswa}</p>
                   </div>
                   <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center">
                     <Users className="h-5 w-5" />
@@ -68,7 +68,7 @@ export default async function DosenDashboardPage() {
                     <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
                       Tahap Terbuka
                     </p>
-                    <p className="text-4xl font-bold mt-1">{tahapTerbuka}/5</p>
+                    <p className="text-3xl sm:text-4xl font-bold mt-1">{tahapTerbuka}/5</p>
                   </div>
                   <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
                     <BookOpen className="h-5 w-5 text-primary" />
@@ -81,15 +81,18 @@ export default async function DosenDashboardPage() {
           {/* Kode kelas */}
           <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground truncate">
                 Kode Kelas — {kelas.nama}
               </p>
-              <p className="font-mono font-bold text-lg tracking-widest">
+              <p className="font-mono font-bold text-xl tracking-widest">
                 {kelas.kode}
               </p>
             </div>
-            <Badge variant="outline" className="text-xs shrink-0">
+            <Badge variant="outline" className="text-xs shrink-0 hidden sm:flex">
               Bagikan ke mahasiswa
+            </Badge>
+            <Badge variant="outline" className="text-xs shrink-0 sm:hidden">
+              Share
             </Badge>
           </div>
 

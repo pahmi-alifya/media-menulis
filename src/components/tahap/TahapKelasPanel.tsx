@@ -86,7 +86,7 @@ export default function TahapKelasPanel({ pertemuanKe, initialTahapList }: Tahap
           return (
             <Card key={tahap.id} className={`transition-opacity ${tahap.isUnlocked ? "" : "opacity-60"}`}>
               <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   {/* Nomor + Info */}
                   <div className="flex items-start gap-3 flex-1 min-w-0">
                     <div
@@ -118,7 +118,7 @@ export default function TahapKelasPanel({ pertemuanKe, initialTahapList }: Tahap
                   </div>
 
                   {/* Tombol aksi */}
-                  <div className="flex gap-2 shrink-0">
+                  <div className="flex gap-2 shrink-0 pl-11 sm:pl-0">
                     <Link href={`/dosen/pertemuan/${pertemuanKe}/tahap/${tahap.id}`}>
                       <Button variant="outline" size="sm" className="gap-1.5">
                         <BookOpen className="h-3.5 w-3.5" />

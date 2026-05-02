@@ -27,7 +27,7 @@ export default async function DosenPertemuanIndexPage() {
   const unlockedCount = tahapList.filter((t) => t.isUnlocked).length;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       <div className="space-y-0.5">
         <EditableNamaKelas initialNama={kelas.nama} kode={kelas.kode} />
         <p className="text-muted-foreground text-sm">

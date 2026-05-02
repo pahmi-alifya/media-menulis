@@ -118,18 +118,18 @@ function KontenDisplay({ konten }: { konten: KontenItem }) {
                   </div>
                 )}
                 {(seg.embed.type === "gdrive" || seg.embed.type === "canva") && (
-                  <div className="w-full rounded-lg overflow-hidden bg-muted border" style={{ minHeight: "600px" }}>
-                    <iframe src={seg.embed.embedUrl} className="w-full" style={{ minHeight: "600px" }} sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowFullScreen loading="lazy" />
+                  <div className="w-full rounded-lg overflow-hidden bg-muted border min-h-87.5 md:min-h-150">
+                    <iframe src={seg.embed.embedUrl} className="w-full min-h-87.5 md:min-h-150" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowFullScreen loading="lazy" />
                   </div>
                 )}
                 {seg.embed.type === "pdf" && (
-                  <div className="w-full rounded-lg overflow-hidden bg-muted border" style={{ minHeight: "700px" }}>
-                    <iframe src={seg.embed.embedUrl} className="w-full" style={{ minHeight: "700px" }} loading="lazy" />
+                  <div className="w-full rounded-lg overflow-hidden bg-muted border min-h-100 md:min-h-175">
+                    <iframe src={seg.embed.embedUrl} className="w-full min-h-100 md:min-h-175" loading="lazy" />
                   </div>
                 )}
                 {seg.embed.type === "image" && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={seg.embed.embedUrl} alt="" className="w-full rounded-lg object-contain max-h-150 bg-muted" loading="lazy" />
+                  <img src={seg.embed.embedUrl} alt="" className="w-full rounded-lg object-contain max-h-125 bg-muted" loading="lazy" />
                 )}
                 <div className="flex justify-end">
                   <a href={seg.url} target="_blank" rel="noopener noreferrer">
@@ -161,14 +161,10 @@ function KontenDisplay({ konten }: { konten: KontenItem }) {
           )}
 
           {(embed.type === "gdrive" || embed.type === "canva") && (
-            <div
-              className="w-full rounded-lg overflow-hidden bg-muted border"
-              style={{ minHeight: "600px" }}
-            >
+            <div className="w-full rounded-lg overflow-hidden bg-muted border min-h-87.5 md:min-h-150">
               <iframe
                 src={embed.embedUrl}
-                className="w-full"
-                style={{ minHeight: "600px" }}
+                className="w-full min-h-87.5 md:min-h-150"
                 sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
                 allowFullScreen
                 loading="lazy"
@@ -177,14 +173,10 @@ function KontenDisplay({ konten }: { konten: KontenItem }) {
           )}
 
           {embed.type === "pdf" && (
-            <div
-              className="w-full rounded-lg overflow-hidden bg-muted border"
-              style={{ minHeight: "700px" }}
-            >
+            <div className="w-full rounded-lg overflow-hidden bg-muted border min-h-100 md:min-h-175">
               <iframe
                 src={embed.embedUrl}
-                className="w-full"
-                style={{ minHeight: "700px" }}
+                className="w-full min-h-100 md:min-h-175"
                 loading="lazy"
               />
             </div>
@@ -195,7 +187,7 @@ function KontenDisplay({ konten }: { konten: KontenItem }) {
             <img
               src={embed.embedUrl}
               alt={konten.judul}
-              className="w-full rounded-lg object-contain max-h-150 bg-muted"
+              className="w-full rounded-lg object-contain max-h-125 bg-muted"
               loading="lazy"
             />
           )}

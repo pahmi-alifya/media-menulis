@@ -28,7 +28,7 @@ export default async function DosenPertemuanPage({
   const tahapList = await getTahapsByKelas(kelas.id);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/dosen/dashboard">
           <Button variant="ghost" size="icon">
@@ -36,7 +36,7 @@ export default async function DosenPertemuanPage({
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">Pertemuan {p}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Pertemuan {p}</h1>
           <p className="text-muted-foreground text-sm">
             Kelola materi dan pantau progress 5 tahap Knows SGM
           </p>

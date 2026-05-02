@@ -99,7 +99,7 @@ export default async function NilaiMahasiswaPage({
       <Card className="border-primary/30">
         <CardContent className="pt-6 pb-6 text-center">
           <p className="text-muted-foreground text-sm mb-1">Nilai Akhir</p>
-          <p className="text-5xl font-bold">{submission.nilaiTotal.toFixed(1)}</p>
+          <p className="text-4xl sm:text-5xl font-bold">{submission.nilaiTotal.toFixed(1)}</p>
           <p className="text-muted-foreground text-sm mt-1">dari 100</p>
           <Badge className="mt-3">{predikat(submission.nilaiTotal)}</Badge>
         </CardContent>

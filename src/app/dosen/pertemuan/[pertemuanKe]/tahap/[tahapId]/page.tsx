@@ -35,30 +35,32 @@ export default async function DosenTahapDetailPage({
   const hasSerahkan = initialKonten.some((k) => k.kategori === "SERAHKAN");
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href={`/dosen/pertemuan/${p}`}>
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl font-bold">
-              Tahap {tahap.urutan}:{" "}
-              {TAHAP_LABEL[tahap.kode as keyof typeof TAHAP_LABEL].singkat}
-            </h1>
-            <Badge variant="secondary">
-              {
-                TIPE_SUBMISI_LABEL[
-                  tahap.tipeSubmisi as keyof typeof TIPE_SUBMISI_LABEL
-                ]
-              }
-            </Badge>
+    <div className="p-4 sm:p-6 space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <Link href={`/dosen/pertemuan/${p}`}>
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl font-bold">
+                Tahap {tahap.urutan}:{" "}
+                {TAHAP_LABEL[tahap.kode as keyof typeof TAHAP_LABEL].singkat}
+              </h1>
+              <Badge variant="secondary">
+                {
+                  TIPE_SUBMISI_LABEL[
+                    tahap.tipeSubmisi as keyof typeof TIPE_SUBMISI_LABEL
+                  ]
+                }
+              </Badge>
+            </div>
+            <p className="text-muted-foreground text-sm">Pertemuan {p}</p>
           </div>
-          <p className="text-muted-foreground text-sm">Pertemuan {p}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 pl-11 sm:pl-0">
           {prevTahap && (
             <Link href={`/dosen/pertemuan/${p}/tahap/${prevTahap.id}`}>
               <Button variant="ghost" size="sm" className="gap-1.5">
@@ -82,7 +84,7 @@ export default async function DosenTahapDetailPage({
           {hasSerahkan && (
             <Link href={`/dosen/pertemuan/${p}/tahap/${tahap.id}/submissions`}>
               <Button variant="outline" size="sm">
-                Submissions ({submissionCount})
+                <span className="hidden sm:inline">Submissions </span>({submissionCount})
               </Button>
             </Link>
           )}

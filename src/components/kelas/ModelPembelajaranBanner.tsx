@@ -45,32 +45,34 @@ export default function ModelPembelajaranBanner({
 
   if (editing) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+      <div className="flex items-center gap-2 flex-wrap rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
         <BookOpen className="h-4 w-4 text-primary shrink-0" />
         <Input
-          className="flex-1 h-8 text-sm"
+          className="flex-1 min-w-40 h-8 text-sm"
           placeholder="https://docs.google.com/..."
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           autoFocus
         />
-        <Button
-          size="sm"
-          className="gap-1.5 h-8"
-          disabled={isPending}
-          onClick={save}
-        >
-          <Check className="h-3.5 w-3.5" />
-          {isPending ? "Menyimpan..." : "Simpan"}
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0"
-          onClick={cancelEdit}
-        >
-          <X className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex gap-2 shrink-0">
+          <Button
+            size="sm"
+            className="gap-1.5 h-8"
+            disabled={isPending}
+            onClick={save}
+          >
+            <Check className="h-3.5 w-3.5" />
+            {isPending ? "Menyimpan..." : "Simpan"}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0"
+            onClick={cancelEdit}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
     );
   }
@@ -104,11 +106,10 @@ export default function ModelPembelajaranBanner({
           <Pencil className="h-3.5 w-3.5" />
         </Button>
       </div>
-      <div className="w-full rounded-lg overflow-hidden bg-muted border">
+      <div className="w-full rounded-lg overflow-hidden bg-muted border min-h-100 md:min-h-175">
         <iframe
           src={buildEmbedUrl(link)?.embedUrl ?? link}
-          className="w-full"
-          style={{ minHeight: "700px" }}
+          className="w-full min-h-100 md:min-h-175"
           sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
           allowFullScreen
           loading="lazy"

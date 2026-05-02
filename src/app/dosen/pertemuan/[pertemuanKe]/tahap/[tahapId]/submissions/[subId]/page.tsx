@@ -44,17 +44,17 @@ export default async function DosenSubmissionDetailPage({
   ) as Partial<Record<AspekKolaborasi, { skor: number; komentar: string }>>
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       <div className="flex items-center gap-3">
         <Link href={`/dosen/pertemuan/${p}/tahap/${tahap.id}/submissions`}>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <div>
+        <div className="min-w-0">
           <h1 className="text-xl font-bold">Detail Submission</h1>
-          <p className="text-muted-foreground text-sm">
-            {submission.user.nama} · Pertemuan {p} · Tahap {tahap.urutan}: {label?.singkat ?? tahap.kode}
+          <p className="text-muted-foreground text-sm line-clamp-2">
+            {submission.user.nama} · P{p} · Tahap {tahap.urutan}: {label?.singkat ?? tahap.kode}
           </p>
         </div>
       </div>

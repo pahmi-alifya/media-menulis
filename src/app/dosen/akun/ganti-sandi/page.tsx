@@ -5,7 +5,7 @@ import GantiSandiForm from "@/components/akun/GantiSandiForm"
 
 export default function DosenGantiSandiPage() {
   return (
-    <div className="p-6 max-w-xl space-y-6">
+    <div className="p-4 sm:p-6 max-w-xl space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/dosen/dashboard">
           <Button variant="ghost" size="icon">

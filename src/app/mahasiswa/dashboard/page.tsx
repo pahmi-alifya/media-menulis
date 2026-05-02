@@ -30,11 +30,10 @@ export default async function MahasiswaDashboardPage() {
             return (
               <div className="space-y-2">
                 <h2 className="text-lg font-semibold">Panduan Penggunaan Aplikasi</h2>
-                <div className="w-full rounded-lg overflow-hidden bg-muted border" style={{ minHeight: "600px" }}>
+                <div className="w-full rounded-lg overflow-hidden bg-muted border min-h-87.5 md:min-h-150">
                   <iframe
                     src={embed?.embedUrl ?? kelas.linkPanduanMahasiswa}
-                    className="w-full"
-                    style={{ minHeight: "600px" }}
+                    className="w-full min-h-87.5 md:min-h-150"
                     sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
                     allowFullScreen
                     loading="lazy"

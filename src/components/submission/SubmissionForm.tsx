@@ -180,7 +180,7 @@ export default function SubmissionForm({
       {/* ── TEKS_LANGSUNG — Tiptap RichTextEditor ── */}
       {tipeSubmisi === "TEKS_LANGSUNG" && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <Label>Tulis Esai Anda</Label>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               {savedAt && (

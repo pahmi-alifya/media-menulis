@@ -17,7 +17,7 @@ export default async function DosenMahasiswaPage() {
   const enrollments = await getEnrollmentsByKelas(kelas.id)
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/dosen/dashboard">
           <Button variant="ghost" size="icon">
@@ -25,7 +25,7 @@ export default async function DosenMahasiswaPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">Daftar Mahasiswa</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Daftar Mahasiswa</h1>
           <p className="text-muted-foreground text-sm">Kelola peserta kelas · {kelas.nama}</p>
         </div>
       </div>
