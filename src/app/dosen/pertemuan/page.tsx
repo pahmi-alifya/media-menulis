@@ -1,43 +1,48 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import Link from "next/link"
+import { redirect } from "next/navigation"
+import { auth } from "@/auth"
 import {
-  getKelasByDosen,
+  getActiveKelas,
+  getSemuaKelasByDosen,
   getTahapsByKelas,
-} from "@/server/queries/kelas.queries";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import ModelPembelajaranBanner from "@/components/kelas/ModelPembelajaranBanner";
-import EditableNamaKelas from "@/components/kelas/EditableNamaKelas";
-import { TAHAP_LABEL } from "@/lib/mock/data";
+} from "@/server/queries/kelas.queries"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import ModelPembelajaranBanner from "@/components/kelas/ModelPembelajaranBanner"
+import KelasSwitcher from "@/components/kelas/KelasSwitcher"
+import { TAHAP_LABEL } from "@/lib/mock/data"
 
 const pertemuanMeta = [
   { ke: 1, label: "Esai: Siklus Know SGM 1" },
-  { ke: 2, label: "Esai: Siklus Knoes SGM 2" },
-];
+  { ke: 2, label: "Esai: Siklus Knows SGM 2" },
+]
 
 export default async function DosenPertemuanIndexPage() {
-  const session = await auth();
-  const kelas = session?.user?.id
-    ? await getKelasByDosen(session.user.id)
-    : null;
-  if (!kelas) redirect("/dosen/dashboard");
+  const session = await auth()
+  if (!session?.user?.id) redirect("/login")
 
-  const tahapList = await getTahapsByKelas(kelas.id);
-  const unlockedCount = tahapList.filter((t) => t.isUnlocked).length;
+  const [kelas, semuaKelas] = await Promise.all([
+    getActiveKelas(session.user.id),
+    getSemuaKelasByDosen(session.user.id),
+  ])
+  if (!kelas) redirect("/dosen/dashboard")
+
+  const tahapList = await getTahapsByKelas(kelas.id)
+  const unlockedCount = tahapList.filter((t) => t.isUnlocked).length
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <div className="space-y-0.5">
-        <EditableNamaKelas initialNama={kelas.nama} kode={kelas.kode} />
+        <KelasSwitcher
+          kelasList={semuaKelas.map((k) => ({ id: k.id, nama: k.nama, kode: k.kode }))}
+          activeKelasId={kelas.id}
+        />
         <p className="text-muted-foreground text-sm">
           Kode: <span className="font-mono font-semibold">{kelas.kode}</span>
         </p>
       </div>
 
-      <ModelPembelajaranBanner
-        initialLink={kelas.linkModelPembelajaran ?? null}
-      />
+      <ModelPembelajaranBanner initialLink={kelas.linkModelPembelajaran ?? null} />
 
       <div className="grid sm:grid-cols-2 gap-4">
         {pertemuanMeta.map((p) => (
@@ -47,9 +52,7 @@ export default async function DosenPertemuanIndexPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-lg font-bold">{p.label}</p>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      5 tahap Knows SGM
-                    </p>
+                    <p className="text-sm text-muted-foreground mt-0.5">5 tahap Knows SGM</p>
                   </div>
                   <Badge variant="secondary" className="shrink-0">
                     {unlockedCount} / 5 terbuka
@@ -65,8 +68,7 @@ export default async function DosenPertemuanIndexPage() {
                           : "bg-muted text-muted-foreground border-transparent"
                       }`}
                     >
-                      {TAHAP_LABEL[t.kode as keyof typeof TAHAP_LABEL]
-                        ?.singkat ?? t.kode}
+                      {TAHAP_LABEL[t.kode as keyof typeof TAHAP_LABEL]?.singkat ?? t.kode}
                     </span>
                   ))}
                 </div>
@@ -76,5 +78,5 @@ export default async function DosenPertemuanIndexPage() {
         ))}
       </div>
     </div>
-  );
+  )
 }
