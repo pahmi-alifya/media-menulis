@@ -8,6 +8,7 @@ export type EmbedType =
   | "canva"    // Canva design → iframe min-h-[600px]
   | "image"    // Gambar publik (imgur, photos.google, jpg/png/webp) → <img>
   | "pdf"      // PDF via GDrive atau direct → iframe min-h-[700px]
+  | "webpage"  // Halaman HTML publik (heyzine, dll) → iframe min-h-[600px]
 
 export interface EmbedResult {
   embedUrl: string
@@ -107,6 +108,11 @@ export function buildEmbedUrl(url: string): EmbedResult | null {
     // ── Direct PDF ───────────────────────────────────────────────────────
     if (/\.pdf(\?.*)?$/i.test(url)) {
       return { embedUrl: url, type: "pdf" }
+    }
+
+    // ── Halaman HTML publik (heyzine, flipbook, dll) ──────────────────────
+    if (/\.html?(\?.*)?$/i.test(url)) {
+      return { embedUrl: url, type: "webpage" }
     }
 
   } catch {

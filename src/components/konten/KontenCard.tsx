@@ -88,6 +88,21 @@ export default function KontenCard({ konten }: { konten: MockKonten }) {
                       />
                     </div>
                   )}
+                  {seg.embed.type === "webpage" && (
+                    <div
+                      className="w-full rounded-md overflow-hidden bg-muted"
+                      style={{ minHeight: "600px" }}
+                    >
+                      <iframe
+                        src={seg.embed.embedUrl}
+                        className="w-full h-full"
+                        style={{ minHeight: "600px" }}
+                        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                        allowFullScreen
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
                   {seg.embed.type === "image" && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -155,6 +170,22 @@ export default function KontenCard({ konten }: { konten: MockKonten }) {
                   src={embed.embedUrl}
                   className="w-full h-full"
                   style={{ minHeight: "640px" }}
+                  loading="lazy"
+                />
+              </div>
+            )}
+
+            {embed.type === "webpage" && (
+              <div
+                className="w-full rounded-md overflow-hidden bg-muted"
+                style={{ minHeight: "600px" }}
+              >
+                <iframe
+                  src={embed.embedUrl}
+                  className="w-full h-full"
+                  style={{ minHeight: "600px" }}
+                  sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                  allowFullScreen
                   loading="lazy"
                 />
               </div>
