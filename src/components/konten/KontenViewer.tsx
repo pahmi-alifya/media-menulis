@@ -127,6 +127,11 @@ function KontenDisplay({ konten }: { konten: KontenItem }) {
                     <iframe src={seg.embed.embedUrl} className="w-full min-h-100 md:min-h-175" loading="lazy" />
                   </div>
                 )}
+                {seg.embed.type === "webpage" && (
+                  <div className="w-full rounded-lg overflow-hidden bg-muted border min-h-100 md:min-h-150">
+                    <iframe src={seg.embed.embedUrl} className="w-full min-h-100 md:min-h-150" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" allowFullScreen loading="lazy" />
+                  </div>
+                )}
                 {seg.embed.type === "image" && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={seg.embed.embedUrl} alt="" className="w-full rounded-lg object-contain max-h-125 bg-muted" loading="lazy" />
@@ -177,6 +182,18 @@ function KontenDisplay({ konten }: { konten: KontenItem }) {
               <iframe
                 src={embed.embedUrl}
                 className="w-full min-h-100 md:min-h-175"
+                loading="lazy"
+              />
+            </div>
+          )}
+
+          {embed.type === "webpage" && (
+            <div className="w-full rounded-lg overflow-hidden bg-muted border min-h-100 md:min-h-150">
+              <iframe
+                src={embed.embedUrl}
+                className="w-full min-h-100 md:min-h-150"
+                sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                allowFullScreen
                 loading="lazy"
               />
             </div>

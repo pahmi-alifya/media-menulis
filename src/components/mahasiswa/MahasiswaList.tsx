@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   AlertDialog,
@@ -39,6 +40,7 @@ import {
   removeEnrollmentAction,
   updateEnrollmentAction,
   resetMahasiswaPasswordAction,
+  addKelasToMahasiswaAction,
 } from "@/server/actions/enrollment.actions";
 
 type EnrollmentRow = {
@@ -46,42 +48,74 @@ type EnrollmentRow = {
   userId: string;
   nim: string | null;
   joinedAt: Date;
+  kelas?: { id: string; nama: string; kode: string };
   user: { id: string; nama: string; email: string; nim: string | null };
 };
 
-const PAGE_SIZE = 4;
+type MahasiswaGrouped = {
+  userId: string;
+  user: { id: string; nama: string; email: string; nim: string | null };
+  enrollments: EnrollmentRow[];
+};
+
+function groupEnrollments(rows: EnrollmentRow[]): MahasiswaGrouped[] {
+  const map = new Map<string, MahasiswaGrouped>();
+  for (const e of rows) {
+    if (!map.has(e.userId)) {
+      map.set(e.userId, { userId: e.userId, user: e.user, enrollments: [] });
+    }
+    map.get(e.userId)!.enrollments.push(e);
+  }
+  return Array.from(map.values());
+}
+
+const PAGE_SIZE = 10;
 
 interface MahasiswaListProps {
   enrollments: EnrollmentRow[];
   kelasId: string;
+  showKelasColumn?: boolean;
+  semuaKelas?: { id: string; nama: string }[];
 }
 
 export default function MahasiswaList({
   enrollments: initial,
   kelasId,
+  showKelasColumn = false,
+  semuaKelas = [],
 }: MahasiswaListProps) {
   const router = useRouter();
-  const [list, setList] = useState<EnrollmentRow[]>(initial);
+  const [rawList, setRawList] = useState<EnrollmentRow[]>(initial);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [isPending, startTransition] = useTransition();
 
-  const [editTarget, setEditTarget] = useState<EnrollmentRow | null>(null);
+  // Edit state
+  const [editTarget, setEditTarget] = useState<MahasiswaGrouped | null>(null);
   const [editForm, setEditForm] = useState({ nama: "", nim: "", email: "" });
-  const [deleteTarget, setDeleteTarget] = useState<EnrollmentRow | null>(null);
-  const [resetTarget, setResetTarget] = useState<EnrollmentRow | null>(null);
+  const [editKelasIds, setEditKelasIds] = useState<string[]>([]);
+  const [initialEditKelasIds, setInitialEditKelasIds] = useState<string[]>([]);
+
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState<MahasiswaGrouped | null>(null);
+  const [deleteEnrollmentIds, setDeleteEnrollmentIds] = useState<string[]>([]);
+
+  // Reset state
+  const [resetTarget, setResetTarget] = useState<MahasiswaGrouped | null>(null);
   const [newPassword, setNewPassword] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    setList(initial);
+    setRawList(initial);
   }, [initial]);
 
-  const filtered = list.filter(
-    (e) =>
-      e.user.nama.toLowerCase().includes(query.toLowerCase()) ||
-      e.user.email.toLowerCase().includes(query.toLowerCase()) ||
-      (e.user.nim ?? "").includes(query),
+  const grouped = groupEnrollments(rawList);
+
+  const filtered = grouped.filter(
+    (m) =>
+      m.user.nama.toLowerCase().includes(query.toLowerCase()) ||
+      m.user.email.toLowerCase().includes(query.toLowerCase()) ||
+      (m.user.nim ?? "").includes(query),
   );
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -95,31 +129,68 @@ export default function MahasiswaList({
     setPage(1);
   }
 
-  function openEdit(e: EnrollmentRow) {
-    setEditTarget(e);
-    setEditForm({
-      nama: e.user.nama,
-      nim: e.user.nim ?? "",
-      email: e.user.email,
-    });
+  function openEdit(m: MahasiswaGrouped) {
+    setEditTarget(m);
+    setEditForm({ nama: m.user.nama, nim: m.user.nim ?? "", email: m.user.email });
+    const enrolled = m.enrollments.map((e) => e.kelas?.id).filter(Boolean) as string[];
+    setEditKelasIds(enrolled);
+    setInitialEditKelasIds(enrolled);
+  }
+
+  function openDelete(m: MahasiswaGrouped) {
+    setDeleteTarget(m);
+    setDeleteEnrollmentIds(m.enrollments.map((e) => e.id));
+  }
+
+  function toggleEditKelas(id: string) {
+    setEditKelasIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   }
 
   function handleEditSave() {
     if (!editTarget) return;
+    const firstEnrollment = editTarget.enrollments[0];
+
+    const toAdd = editKelasIds.filter((id) => !initialEditKelasIds.includes(id));
+    const toRemoveKelasIds = initialEditKelasIds.filter(
+      (id) => !editKelasIds.includes(id),
+    );
+    const kelasToEnrollmentId = new Map(
+      editTarget.enrollments.map((e) => [e.kelas?.id ?? "", e.id]),
+    );
+    const toRemoveEnrollmentIds = toRemoveKelasIds
+      .map((kelasId) => kelasToEnrollmentId.get(kelasId))
+      .filter(Boolean) as string[];
+
     startTransition(async () => {
-      const result = await updateEnrollmentAction({
-        enrollmentId: editTarget.id,
+      // Update user data first (enrollment still exists at this point)
+      const updateResult = await updateEnrollmentAction({
+        enrollmentId: firstEnrollment.id,
         nama: editForm.nama,
         nim: editForm.nim || undefined,
         email: editForm.email,
       });
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      setList((prev) =>
-        prev.map((e) =>
-          e.id === editTarget.id
+      if (updateResult.error) { toast.error(updateResult.error); return; }
+
+      // Add and remove in parallel
+      const [addResult, ...removeResults] = await Promise.all([
+        toAdd.length > 0
+          ? addKelasToMahasiswaAction({ userId: editTarget.userId, kelasIds: toAdd })
+          : Promise.resolve({ data: { addedCount: 0 }, error: null }),
+        ...toRemoveEnrollmentIds.map((id) => removeEnrollmentAction(id)),
+      ]);
+
+      if (addResult.error) { toast.error(addResult.error); return; }
+      const removeError = removeResults.find((r) => r.error)?.error;
+      if (removeError) { toast.error(removeError); return; }
+
+      setRawList((prev) => {
+        const withoutRemoved = prev.filter(
+          (e) => !toRemoveEnrollmentIds.includes(e.id),
+        );
+        return withoutRemoved.map((e) =>
+          e.userId === editTarget.userId
             ? {
                 ...e,
                 user: {
@@ -130,40 +201,53 @@ export default function MahasiswaList({
                 },
               }
             : e,
-        ),
-      );
+        );
+      });
+
+      const added = addResult.data?.addedCount ?? 0;
+      const removed = toRemoveEnrollmentIds.length;
       setEditTarget(null);
-      toast.success("Data mahasiswa diperbarui.");
+
+      let msg = "Data mahasiswa diperbarui.";
+      if (added > 0 && removed > 0)
+        msg = `Data diperbarui. Ditambahkan ke ${added} kelas, dihapus dari ${removed} kelas.`;
+      else if (added > 0)
+        msg = `Data diperbarui. ${editForm.nama} ditambahkan ke ${added} kelas baru.`;
+      else if (removed > 0)
+        msg = `Data diperbarui. ${editForm.nama} dihapus dari ${removed} kelas.`;
+
+      toast.success(msg);
       router.refresh();
     });
   }
 
   function handleDelete() {
-    if (!deleteTarget) return;
+    if (!deleteTarget || deleteEnrollmentIds.length === 0) return;
     startTransition(async () => {
-      const result = await removeEnrollmentAction(deleteTarget.id);
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      setList((prev) => prev.filter((e) => e.id !== deleteTarget.id));
+      const results = await Promise.all(
+        deleteEnrollmentIds.map((id) => removeEnrollmentAction(id)),
+      );
+      const firstError = results.find((r) => r.error);
+      if (firstError?.error) { toast.error(firstError.error); return; }
+      setRawList((prev) =>
+        prev.filter((e) => !deleteEnrollmentIds.includes(e.id)),
+      );
+      const count = deleteEnrollmentIds.length;
+      const nama = deleteTarget.user.nama;
       setDeleteTarget(null);
-      toast.success(`${deleteTarget.user.nama} dihapus dari daftar.`);
+      toast.success(
+        count === 1 ? `${nama} dihapus dari kelas.` : `${nama} dihapus dari ${count} kelas.`,
+      );
       router.refresh();
     });
   }
 
   function handleConfirmReset() {
     if (!resetTarget) return;
+    const firstKelasId = resetTarget.enrollments[0]?.kelas?.id ?? kelasId;
     startTransition(async () => {
-      const result = await resetMahasiswaPasswordAction(
-        resetTarget.userId,
-        kelasId,
-      );
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
+      const result = await resetMahasiswaPasswordAction(resetTarget.userId, firstKelasId);
+      if (result.error) { toast.error(result.error); return; }
       setNewPassword(result.data!.password);
       setResetTarget(null);
     });
@@ -175,6 +259,10 @@ export default function MahasiswaList({
     toast.success("Kata sandi disalin");
     setTimeout(() => setCopied(false), 2000);
   }
+
+  const isRemovingFromKelas = initialEditKelasIds.some(
+    (id) => !editKelasIds.includes(id),
+  );
 
   return (
     <div className="space-y-3">
@@ -189,9 +277,9 @@ export default function MahasiswaList({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        {filtered.length === list.length
-          ? `${list.length} mahasiswa terdaftar`
-          : `${filtered.length} dari ${list.length} mahasiswa`}
+        {filtered.length === grouped.length
+          ? `${grouped.length} mahasiswa terdaftar`
+          : `${filtered.length} dari ${grouped.length} mahasiswa`}
       </p>
 
       <Card>
@@ -208,6 +296,11 @@ export default function MahasiswaList({
                   <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">
                     NIM / NPM
                   </th>
+                  {showKelasColumn && (
+                    <th className="text-left px-4 py-3 font-medium hidden md:table-cell">
+                      Kelas
+                    </th>
+                  )}
                   <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">
                     Email
                   </th>
@@ -218,65 +311,91 @@ export default function MahasiswaList({
                 </tr>
               </thead>
               <tbody>
-                {paginated.map((e, idx) => (
-                  <tr
-                    key={e.id}
-                    className={idx < paginated.length - 1 ? "border-b" : ""}
-                  >
-                    <td className="px-4 py-3">
-                      <p className="font-medium">{e.user.nama}</p>
-                      <p className="text-xs text-muted-foreground sm:hidden">
-                        {e.user.nim ?? "—"}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
-                      {e.user.nim ?? (
-                        <span className="italic opacity-50">Belum diisi</span>
+                {paginated.map((m, idx) => {
+                  const earliestJoin = m.enrollments.reduce(
+                    (acc, e) =>
+                      new Date(e.joinedAt) < acc ? new Date(e.joinedAt) : acc,
+                    new Date(m.enrollments[0].joinedAt),
+                  );
+                  return (
+                    <tr
+                      key={m.userId}
+                      className={idx < paginated.length - 1 ? "border-b" : ""}
+                    >
+                      <td className="px-4 py-3">
+                        <p className="font-medium">{m.user.nama}</p>
+                        <p className="text-xs text-muted-foreground sm:hidden">
+                          {m.user.nim ?? "—"}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
+                        {m.user.nim ?? (
+                          <span className="italic opacity-50">Belum diisi</span>
+                        )}
+                      </td>
+                      {showKelasColumn && (
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          <div className="flex flex-wrap gap-1">
+                            {m.enrollments.map((e) => (
+                              <span
+                                key={e.id}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-xs font-medium"
+                              >
+                                {e.kelas?.nama ?? "—"}
+                                {e.kelas?.kode && (
+                                  <code className="text-[10px] text-muted-foreground font-mono">
+                                    {e.kelas.kode}
+                                  </code>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
-                      {e.user.email}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
-                      {new Date(e.joinedAt).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          title="Edit"
-                          onClick={() => openEdit(e)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          title="Reset Sandi"
-                          onClick={() => setResetTarget(e)}
-                        >
-                          <KeyRound className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          title="Hapus"
-                          onClick={() => setDeleteTarget(e)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
+                        {m.user.email}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+                        {earliestJoin.toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            title="Edit"
+                            onClick={() => openEdit(m)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            title="Reset Sandi"
+                            onClick={() => setResetTarget(m)}
+                          >
+                            <KeyRound className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            title="Hapus"
+                            onClick={() => openDelete(m)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
@@ -326,7 +445,7 @@ export default function MahasiswaList({
         open={!!editTarget}
         onOpenChange={(open) => !open && setEditTarget(null)}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Data Mahasiswa</DialogTitle>
             <DialogDescription>Perbarui informasi mahasiswa.</DialogDescription>
@@ -366,6 +485,45 @@ export default function MahasiswaList({
                 }
               />
             </div>
+
+            {semuaKelas.length > 0 && (
+              <div className="space-y-2">
+                <Label>Kelas</Label>
+                {isRemovingFromKelas && (
+                  <p className="text-xs text-destructive">
+                    Menghapus centang dari kelas akan menghapus semua data
+                    submission mahasiswa di kelas tersebut.
+                  </p>
+                )}
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  {semuaKelas.map((k) => {
+                    const isEnrolled = initialEditKelasIds.includes(k.id);
+                    return (
+                      <label
+                        key={k.id}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-md border cursor-pointer hover:bg-muted/50 transition-colors select-none"
+                      >
+                        <Checkbox
+                          checked={editKelasIds.includes(k.id)}
+                          onCheckedChange={() => toggleEditKelas(k.id)}
+                        />
+                        <span className="text-sm flex-1">{k.nama}</span>
+                        {isEnrolled && (
+                          <span className="text-[10px] text-muted-foreground">
+                            Terdaftar
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+                {editKelasIds.length === 0 && (
+                  <p className="text-xs text-destructive">
+                    Pilih minimal satu kelas.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditTarget(null)}>
@@ -374,7 +532,10 @@ export default function MahasiswaList({
             <Button
               onClick={handleEditSave}
               disabled={
-                !editForm.nama.trim() || !editForm.email.trim() || isPending
+                !editForm.nama.trim() ||
+                !editForm.email.trim() ||
+                editKelasIds.length === 0 ||
+                isPending
               }
             >
               {isPending ? "Menyimpan..." : "Simpan"}
@@ -392,20 +553,49 @@ export default function MahasiswaList({
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus Mahasiswa?</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{deleteTarget?.user.nama}</strong> akan dihapus dari
-              daftar peserta. Seluruh data submission mahasiswa ini juga akan
-              ikut terhapus. Tindakan ini tidak dapat dibatalkan.
+              Pilih kelas yang ingin dihapus untuk{" "}
+              <strong>{deleteTarget?.user.nama}</strong>. Seluruh data submission
+              di kelas yang dipilih juga akan ikut terhapus.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {deleteTarget && deleteTarget.enrollments.length > 1 && (
+            <div className="space-y-1.5 px-1 max-h-48 overflow-y-auto">
+              {deleteTarget.enrollments.map((e) => (
+                <label
+                  key={e.id}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-md border cursor-pointer hover:bg-muted/50 transition-colors select-none"
+                >
+                  <Checkbox
+                    checked={deleteEnrollmentIds.includes(e.id)}
+                    onCheckedChange={() =>
+                      setDeleteEnrollmentIds((prev) =>
+                        prev.includes(e.id)
+                          ? prev.filter((x) => x !== e.id)
+                          : [...prev, e.id],
+                      )
+                    }
+                  />
+                  <span className="text-sm flex-1">{e.kelas?.nama ?? "—"}</span>
+                  {e.kelas?.kode && (
+                    <code className="text-[10px] text-muted-foreground font-mono">
+                      {e.kelas.kode}
+                    </code>
+                  )}
+                </label>
+              ))}
+            </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={isPending}
+              disabled={isPending || deleteEnrollmentIds.length === 0}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               <Trash2 className="h-4 w-4 mr-1.5" />
-              {isPending ? "Menghapus..." : "Ya, Hapus"}
+              {isPending
+                ? "Menghapus..."
+                : `Ya, Hapus dari ${deleteEnrollmentIds.length} Kelas`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
