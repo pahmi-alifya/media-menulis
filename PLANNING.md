@@ -572,6 +572,338 @@ Card kecil dengan `aspect-[4/3]` membuat dokumen terlalu kecil untuk dibaca nyam
 
 ---
 
+## FASE 7 — CRUD Kelas & Kelas Switcher
+
+### Status: [ ] Belum dimulai
+
+### Konteks
+Saat ini sistem hanya mendukung **satu kelas per dosen** (query pakai `findFirst`).
+Fase ini mengubah menjadi **multi-kelas** dengan konsep "kelas aktif" yang disimpan di cookie,
+tanpa mengubah URL structure halaman pertemuan.
+
+---
+
+### Step 1 — Query baru (`kelas.queries.ts`)
+
+Tambah tiga fungsi baru, **tidak hapus** fungsi lama dulu:
+
+```ts
+// Return semua kelas milik dosen, ordered terbaru dulu
+getSemuaKelasByDosen(dosenId: string): Promise<KelasByDosen[]>
+
+// Return satu kelas dengan validasi ownership (guard anti IDOR)
+getKelasById(kelasId: string, dosenId: string): Promise<KelasByDosen | null>
+
+// Baca cookie "activeKelasId" → getKelasById → fallback ke findFirst jika invalid/kosong
+// Dipakai oleh dashboard & pertemuan sebagai pengganti getKelasByDosen(dosenId)
+getActiveKelas(dosenId: string): Promise<KelasByDosen | null>
+  // implementasi:
+  // 1. cookies().get("activeKelasId")?.value
+  // 2. if ada → getKelasById(cookieVal, dosenId)
+  // 3. if null (cookie kosong / kelas tidak valid) → findFirst (fallback)
+```
+
+Type export baru:
+```ts
+export type SemuaKelasByDosen = KelasByDosen[]  // alias untuk kejelasan
+```
+
+---
+
+### Step 2 — Actions baru (`kelas.actions.ts`)
+
+#### `setActiveKelasAction(kelasId: string): Promise<Result>`
+```
+- Auth check (DOSEN)
+- Validasi ownership: getKelasById(kelasId, dosenId) → error jika null
+- cookies().set("activeKelasId", kelasId, { path: "/", maxAge: 60 * 60 * 24 * 30 })
+- revalidatePath("/dosen/dashboard")
+- revalidatePath("/dosen/pertemuan")
+- revalidatePath("/dosen/pertemuan/1")
+- revalidatePath("/dosen/pertemuan/2")
+- return { data: undefined, error: null }
+```
+
+#### `updateKelasAction(input: { kelasId: string; nama: string; deskripsi?: string }): Promise<Result>`
+```
+- Auth check (DOSEN)
+- Validasi ownership via getKelasById
+- prisma.kelas.update({ nama, deskripsi })
+- revalidatePath semua dosen/pertemuan/*
+- return result
+```
+> Menggantikan `updateNamaKelasAction` yang ada (tetap dipertahankan untuk backward compat sementara)
+
+#### `deleteKelasAction(kelasId: string): Promise<Result>`
+```
+- Auth check (DOSEN)
+- Validasi ownership via getKelasById
+- Cek apakah ini kelas aktif di cookie → jika ya, hapus cookie setelah delete
+- prisma.kelas.delete({ where: { id: kelasId } })
+  (cascade otomatis ke: Tahap → Konten, Submission → NilaiAspek/NilaiKolab/PeerReview,
+   Enrollment, Forum → PesanForum)
+  PASTIKAN schema Prisma punya onDelete: Cascade di semua relasi dari Kelas
+- revalidatePath("/dosen/kelas")
+- revalidatePath("/dosen/dashboard")
+- return result
+```
+
+#### `duplicateKelasAction(input: { sourceKelasId: string; nama: string; deskripsi?: string }): Promise<Result<{ id: string; kode: string }>>`
+
+Menyalin seluruh **materi (Konten)** dari kelas sumber ke kelas baru. Data mahasiswa tidak ikut disalin.
+
+```
+- Auth check (DOSEN)
+- Validasi ownership source: getKelasById(sourceKelasId, dosenId) → error jika null
+- Fetch source kelas beserta semua tahap + konten:
+    prisma.kelas.findUnique({
+      where: { id: sourceKelasId },
+      include: {
+        tahaps: {
+          orderBy: { urutan: "asc" },
+          include: { konten: { orderBy: { urutan: "asc" } } }
+        }
+      }
+    })
+- Generate kode baru (sama seperti createKelasAction)
+- prisma.kelas.create({
+    nama: input.nama.trim(),
+    deskripsi: input.deskripsi ?? source.deskripsi,
+    kode,
+    dosenId,
+    linkModelPembelajaran: source.linkModelPembelajaran,  // salin link panduan
+    linkPanduanMahasiswa:  source.linkPanduanMahasiswa,  // salin link panduan
+    tahaps: {
+      create: TAHAP_DEFINITIONS.map((def) => ({
+        urutan: def.urutan,
+        kode: def.kode,
+        tipeSubmisi: def.tipeSubmisi,
+        isUnlocked: def.isUnlocked,           // fresh — tahap 1 terbuka, sisanya terkunci
+        unlockedAt: def.isUnlocked ? new Date() : null,
+        konten: {
+          create: sourceTahapByUrutan[def.urutan]?.konten.map((k) => ({
+            tipe:        k.tipe,
+            judul:       k.judul,
+            body:        k.body,
+            url:         k.url,
+            urutan:      k.urutan,
+            pertemuanKe: k.pertemuanKe,
+            kategori:    k.kategori,
+          })) ?? []
+        }
+      }))
+    }
+  })
+- Create Forum KELAS untuk kelas baru
+- Set kelas baru sebagai aktif: cookies().set("activeKelasId", newKelas.id, ...)
+- revalidatePath("/dosen/kelas")
+- revalidatePath("/dosen/dashboard")
+- return { data: { id: newKelas.id, kode: newKelas.kode }, error: null }
+```
+
+**Yang DISALIN** dari kelas sumber:
+| Data | Keterangan |
+|---|---|
+| `Konten` (semua tahap) | tipe, judul, body, url, urutan, pertemuanKe, kategori |
+| `linkModelPembelajaran` | link banner model pembelajaran |
+| `linkPanduanMahasiswa` | link panduan mahasiswa |
+| `deskripsi` | bisa diubah di form sebelum duplikasi |
+
+**Yang TIDAK disalin** (data per-kelas berjalan):
+| Data | Alasan |
+|---|---|
+| `Enrollment` | Mahasiswa berbeda per kelas |
+| `Submission` | Tugas mahasiswa tidak relevan di kelas baru |
+| `Forum` + `PesanForum` | Diskusi tidak dipindah |
+| `NilaiAspek`, `NilaiKolaborasi` | Nilai per mahasiswa |
+| `PeerReview` | Review antar mahasiswa |
+| Status `isUnlocked` tahap | Kelas baru mulai dari awal (hanya tahap 1 terbuka) |
+
+#### Refactor actions lama — ganti `findFirst` ke `getActiveKelas`:
+- `updateLinkPanduanMahasiswaAction` — baris `findFirst` ganti ke `getActiveKelas(dosenId)`
+- `updateLinkModelPembelajaranAction` — sama
+- `updateNamaKelasAction` — sama (keep for backward compat, atau hapus jika `updateKelasAction` sudah dipakai)
+
+---
+
+### Step 3 — Halaman CRUD Kelas (`/dosen/kelas`)
+
+**File baru**: `src/app/dosen/kelas/page.tsx`
+```tsx
+// Server Component
+// 1. auth() → redirect jika bukan DOSEN
+// 2. getSemuaKelasByDosen(session.user.id) → kelas[]
+// 3. cookies().get("activeKelasId") → activeKelasId
+// 4. Render: heading + BuatKelasDialog + grid KelasCard
+```
+
+Layout:
+```
+┌──────────────────────────────────────────────────────┐
+│  Kelola Kelas                  [+ Buat Kelas Baru]   │
+├──────────────────────────────────────────────────────┤
+│  ┌─────────────────┐  ┌─────────────────┐            │
+│  │ KelasCard       │  │ KelasCard       │  ...       │
+│  │ Badge: Aktif    │  │                 │            │
+│  │ [⋮ dropdown]   │  │ [⋮ dropdown]   │            │
+│  └─────────────────┘  └─────────────────┘            │
+└──────────────────────────────────────────────────────┘
+```
+
+**Komponen baru**:
+
+#### `src/components/kelas/KelasCard.tsx`
+```tsx
+// Props: kelas: KelasByDosen, isActive: boolean
+// Tampilkan:
+//   - Badge "Aktif" jika isActive
+//   - Nama kelas (bold)
+//   - Kode: font-mono
+//   - Jumlah mahasiswa (_count.enrollments)
+//   - Tanggal dibuat (format: dd MMMM yyyy)
+// Actions via DropdownMenu (ikon ⋮ di pojok kanan atas):
+//   - "Jadikan Aktif"  → setActiveKelasAction     (hidden jika sudah aktif)
+//   - "Edit"           → buka EditKelasDialog
+//   - "Duplikasi"      → buka DuplikasiKelasDialog  ← BARU
+//   - separator
+//   - "Hapus"          → buka HapusKelasDialog      (teks merah/destructive)
+```
+
+#### `src/components/kelas/EditKelasDialog.tsx`
+```tsx
+// Dialog form: nama (required) + deskripsi (opsional)
+// Pre-fill dengan nilai kelas saat ini
+// Submit → updateKelasAction({ kelasId, nama, deskripsi })
+// Toast success/error via sonner
+// Pattern: React Hook Form + Zod resolver (sesuai konvensi project)
+```
+
+#### `src/components/kelas/DuplikasiKelasDialog.tsx`
+```tsx
+// Props: sourceKelas: { id: string; nama: string }
+// Dialog dengan form:
+//   - Info banner: "Semua materi dari '[nama source]' akan disalin ke kelas baru.
+//                   Data mahasiswa, submission, dan nilai tidak ikut disalin."
+//   - Field "Nama Kelas Baru" (required, pre-fill: "[nama source] — Salinan")
+//   - Field "Deskripsi" (opsional, pre-fill dari source)
+// Submit → duplicateKelasAction({ sourceKelasId, nama, deskripsi })
+// Loading state: "Menduplikasi..." (bisa butuh waktu karena copy banyak konten)
+// Setelah sukses:
+//   - toast("Kelas berhasil diduplikasi")
+//   - dialog tertutup
+//   - page refresh (revalidatePath sudah dipanggil di action)
+// Pattern: React Hook Form + Zod resolver
+```
+
+#### `src/components/kelas/HapusKelasDialog.tsx`
+```tsx
+// AlertDialog konfirmasi: "Hapus kelas ini? Semua data tidak bisa dipulihkan."
+// Tampilkan nama kelas di body dialog
+// Submit → deleteKelasAction(kelasId)
+// Loading state: button disabled + teks "Menghapus..."
+// Setelah sukses: page refresh otomatis via revalidatePath
+```
+
+---
+
+### Step 4 — Sidebar: tambah menu "Kelas"
+
+**File**: `src/components/layout/DosenSidebar.tsx`
+
+Tambah nav item baru setelah "Dashboard", sebelum "Pertemuan":
+```ts
+import { School } from "lucide-react"
+
+const navItems = [
+  { href: "/dosen/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
+  { href: "/dosen/kelas",      label: "Kelas",       icon: School },         // ← BARU
+  { href: "/dosen/pertemuan",  label: "Pertemuan",   icon: BookOpen },
+  { href: "/dosen/mahasiswa",  label: "Mahasiswa",   icon: Users },
+]
+```
+
+---
+
+### Step 5 — Dashboard: tampilkan kelas aktif + kode
+
+**File**: `src/app/dosen/dashboard/page.tsx`
+
+Ganti query `getKelasByDosen` → `getActiveKelas`.
+
+Bagian header dashboard cukup tampilkan:
+```
+Selamat datang, [nama dosen]
+
+Kelas Aktif
+[Nama Kelas]      Kode: [ABC123]
+```
+
+Tidak perlu info lebih dari itu. Statistik lain (jumlah mahasiswa, tahap, dll) bisa tetap ada
+tapi tidak perlu menambah info kelas baru.
+
+---
+
+### Step 6 — Pertemuan: `KelasSwitcher` di header
+
+**File baru**: `src/components/kelas/KelasSwitcher.tsx`
+```tsx
+"use client"
+// Props: kelasList: { id, nama, kode }[], activeKelasId: string
+// Render: shadcn/ui Select atau Popover+Command (Combobox)
+// Tampilan trigger: nama kelas aktif + chevron
+// Pilihan: semua kelas dosen (highlight yang aktif dengan checkmark)
+// onChange → setActiveKelasAction(kelasId)
+//   → action set cookie + revalidatePath → page re-render otomatis
+```
+
+**File**: `src/app/dosen/pertemuan/page.tsx`
+
+Ganti query `getKelasByDosen` → `getActiveKelas` + tambah `getSemuaKelasByDosen`.
+
+Header pertemuan berubah dari:
+```tsx
+<EditableNamaKelas initialNama={kelas.nama} kode={kelas.kode} />
+```
+Menjadi:
+```tsx
+<KelasSwitcher
+  kelasList={semuaKelas.map(k => ({ id: k.id, nama: k.nama, kode: k.kode }))}
+  activeKelasId={activeKelas.id}
+/>
+<p className="text-muted-foreground text-sm">
+  Kode: <span className="font-mono font-semibold">{activeKelas.kode}</span>
+</p>
+```
+
+Halaman `pertemuan/[pertemuanKe]/page.tsx` juga ganti `getKelasByDosen` → `getActiveKelas`.
+
+---
+
+### Urutan implementasi
+
+```
+[ ] Step 1 — Query: getSemuaKelasByDosen, getKelasById, getActiveKelas
+[ ] Step 2 — Actions: setActiveKelasAction, updateKelasAction, deleteKelasAction,
+             duplicateKelasAction
+             Refactor: updateLinkPanduanMahasiswaAction, updateLinkModelPembelajaranAction
+[ ] Step 3 — Halaman /dosen/kelas + KelasCard + EditKelasDialog +
+             DuplikasiKelasDialog + HapusKelasDialog
+[ ] Step 4 — Sidebar: tambah nav item Kelas (icon: School)
+[ ] Step 5 — Dashboard: ganti ke getActiveKelas, sederhanakan header
+[ ] Step 6 — Pertemuan: KelasSwitcher gantikan EditableNamaKelas di header
+```
+
+### Catatan penting
+- Schema Prisma **sudah benar** (`User.kelasDiajar Kelas[]`) — tidak perlu migrasi
+- `onDelete: Cascade` perlu dicek di semua relasi dari `Kelas` sebelum `deleteKelasAction`
+- Cookie `activeKelasId` di-set dengan `httpOnly: false` agar bisa dibaca client jika perlu,
+  tapi cukup dibaca server via `cookies()` dari `next/headers`
+- `BuatKelasDialog` sudah ada di `src/components/dosen/BuatKelasDialog.tsx` — reuse langsung
+- `duplicateKelasAction` harus fetch source kelas + semua konten dalam **satu query** dengan
+  `include: { tahaps: { include: { konten: true } } }` sebelum create — hindari N+1 query
+
+---
+
 ## ENV VARIABLES YANG DIBUTUHKAN
 
 ```env
