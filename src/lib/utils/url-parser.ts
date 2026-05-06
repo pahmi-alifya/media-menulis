@@ -59,6 +59,11 @@ export function buildEmbedUrl(url: string): EmbedResult | null {
       return { embedUrl, type: "gdrive" }
     }
 
+    // ── Google Drive folder — tidak bisa di-embed, tampilkan sebagai link card
+    if (url.includes("drive.google.com/drive/folders/")) {
+      return null
+    }
+
     // ── Google Drive — PDF via /file/d/ID ────────────────────────────────
     if (url.includes("drive.google.com/file/d/")) {
       const match = url.match(/\/file\/d\/([^/]+)/)
