@@ -4,6 +4,7 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { revalidatePath } from "next/cache"
+import { cookies } from "next/headers"
 
 type Result<T = void> = { data: T; error: null } | { data: null; error: string }
 
@@ -73,6 +74,138 @@ export async function enrollMahasiswaAction(input: {
 
   revalidatePath("/dosen/mahasiswa")
   return { data: { password: plainPassword, isNewUser }, error: null }
+}
+
+// ── Dosen: tambah mahasiswa ke banyak kelas sekaligus ────────────────────────
+
+export async function enrollMahasiswaMultiAction(input: {
+  nama: string
+  nim?: string
+  email: string
+  kelasIds: string[]
+}): Promise<Result<{ password: string | null; isNewUser: boolean; addedCount: number }>> {
+  const session = await auth()
+  if (!session?.user?.id || session.user.role !== "DOSEN") {
+    return { data: null, error: "Akses ditolak." }
+  }
+  if (!input.kelasIds.length) return { data: null, error: "Pilih minimal satu kelas." }
+  if (!input.nama.trim() || !input.email.trim()) {
+    return { data: null, error: "Nama dan email wajib diisi." }
+  }
+
+  // Validasi semua kelas milik dosen ini
+  const kelasList = await prisma.kelas.findMany({
+    where: { id: { in: input.kelasIds }, dosenId: session.user.id },
+    select: { id: true },
+  })
+  if (kelasList.length !== input.kelasIds.length) {
+    return { data: null, error: "Satu atau lebih kelas tidak valid." }
+  }
+
+  const emailLower = input.email.toLowerCase().trim()
+  let user = await prisma.user.findUnique({ where: { email: emailLower } })
+  let plainPassword: string | null = null
+  let isNewUser = false
+
+  if (user) {
+    if (user.role !== "MAHASISWA") {
+      return { data: null, error: "Email sudah digunakan oleh akun non-mahasiswa." }
+    }
+  } else {
+    plainPassword = generatePassword()
+    const hashed = await bcrypt.hash(plainPassword, 12)
+    user = await prisma.user.create({
+      data: {
+        nama: input.nama.trim(),
+        nim: input.nim?.trim() || null,
+        email: emailLower,
+        password: hashed,
+        role: "MAHASISWA",
+      },
+    })
+    isNewUser = true
+  }
+
+  // Buat enrollment untuk kelas yang belum diikuti
+  const existing = await prisma.enrollment.findMany({
+    where: { userId: user.id, kelasId: { in: input.kelasIds } },
+    select: { kelasId: true },
+  })
+  const existingIds = new Set(existing.map((e) => e.kelasId))
+  const newKelasIds = input.kelasIds.filter((id) => !existingIds.has(id))
+
+  if (newKelasIds.length > 0) {
+    await prisma.enrollment.createMany({
+      data: newKelasIds.map((kelasId) => ({
+        kelasId,
+        userId: user!.id,
+        nim: input.nim?.trim() || null,
+      })),
+    })
+  }
+
+  revalidatePath("/dosen/mahasiswa")
+  return { data: { password: plainPassword, isNewUser, addedCount: newKelasIds.length }, error: null }
+}
+
+// ── Dosen: tambahkan mahasiswa yang sudah ada ke kelas tambahan ───────────────
+
+export async function addKelasToMahasiswaAction(input: {
+  userId: string
+  kelasIds: string[]
+}): Promise<Result<{ addedCount: number }>> {
+  const session = await auth()
+  if (!session?.user?.id || session.user.role !== "DOSEN") {
+    return { data: null, error: "Akses ditolak." }
+  }
+  if (!input.kelasIds.length) return { data: { addedCount: 0 }, error: null }
+
+  const kelasList = await prisma.kelas.findMany({
+    where: { id: { in: input.kelasIds }, dosenId: session.user.id },
+    select: { id: true },
+  })
+  if (kelasList.length !== input.kelasIds.length) {
+    return { data: null, error: "Satu atau lebih kelas tidak valid." }
+  }
+
+  const existing = await prisma.enrollment.findMany({
+    where: { userId: input.userId, kelasId: { in: input.kelasIds } },
+    select: { kelasId: true },
+  })
+  const existingIds = new Set(existing.map((e) => e.kelasId))
+  const newKelasIds = input.kelasIds.filter((id) => !existingIds.has(id))
+
+  if (newKelasIds.length > 0) {
+    await prisma.enrollment.createMany({
+      data: newKelasIds.map((kelasId) => ({ kelasId, userId: input.userId })),
+    })
+  }
+
+  revalidatePath("/dosen/mahasiswa")
+  return { data: { addedCount: newKelasIds.length }, error: null }
+}
+
+// ── Mahasiswa: set kelas aktif ────────────────────────────────────────────────
+
+export async function setActiveMahasiswaKelasAction(kelasId: string): Promise<Result> {
+  const session = await auth()
+  if (!session?.user?.id || session.user.role !== "MAHASISWA") {
+    return { data: null, error: "Akses ditolak." }
+  }
+
+  const enrollment = await prisma.enrollment.findFirst({
+    where: { userId: session.user.id, kelasId },
+  })
+  if (!enrollment) return { data: null, error: "Tidak terdaftar di kelas ini." }
+
+  const cookieStore = await cookies()
+  cookieStore.set("activeMahasiswaKelasId", kelasId, {
+    maxAge: 60 * 60 * 24 * 30,
+    httpOnly: false,
+    sameSite: "lax",
+    path: "/",
+  })
+  return { data: undefined, error: null }
 }
 
 // ── Mahasiswa: bergabung via kode ─────────────────────────────────────────────

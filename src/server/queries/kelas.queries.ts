@@ -1,3 +1,4 @@
+import { cookies } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 
@@ -18,7 +19,42 @@ const kelasByMahasiswaArgs = {
 export type KelasByDosen = Prisma.KelasGetPayload<typeof kelasByDosenArgs>
 export type KelasByMahasiswa = Prisma.KelasGetPayload<typeof kelasByMahasiswaArgs>
 
+/** @deprecated Gunakan getActiveKelas() untuk multi-kelas support */
 export async function getKelasByDosen(dosenId: string): Promise<KelasByDosen | null> {
+  return prisma.kelas.findFirst({
+    where: { dosenId },
+    ...kelasByDosenArgs,
+    orderBy: { createdAt: "desc" },
+  })
+}
+
+export async function getSemuaKelasByDosen(dosenId: string): Promise<KelasByDosen[]> {
+  return prisma.kelas.findMany({
+    where: { dosenId },
+    ...kelasByDosenArgs,
+    orderBy: { createdAt: "desc" },
+  })
+}
+
+export async function getKelasById(
+  kelasId: string,
+  dosenId: string,
+): Promise<KelasByDosen | null> {
+  return prisma.kelas.findFirst({
+    where: { id: kelasId, dosenId },
+    ...kelasByDosenArgs,
+  })
+}
+
+export async function getActiveKelas(dosenId: string): Promise<KelasByDosen | null> {
+  const cookieStore = await cookies()
+  const activeId = cookieStore.get("activeKelasId")?.value
+
+  if (activeId) {
+    const kelas = await getKelasById(activeId, dosenId)
+    if (kelas) return kelas
+  }
+
   return prisma.kelas.findFirst({
     where: { dosenId },
     ...kelasByDosenArgs,
@@ -58,12 +94,45 @@ export async function getEnrollmentsByKelas(kelasId: string) {
   })
 }
 
+export async function getSemuaEnrollmentsByDosen(dosenId: string) {
+  return prisma.enrollment.findMany({
+    where: { kelas: { dosenId } },
+    include: {
+      user: { select: { id: true, nama: true, email: true, nim: true } },
+      kelas: { select: { id: true, nama: true, kode: true } },
+    },
+    orderBy: [{ kelas: { createdAt: "desc" } }, { joinedAt: "asc" }],
+  })
+}
+
 export async function getKelasByMahasiswa(userId: string) {
   return prisma.enrollment.findFirst({
     where: { userId },
     include: { kelas: { ...kelasByMahasiswaArgs } },
     orderBy: { joinedAt: "asc" },
   })
+}
+
+export async function getAllKelasByMahasiswa(userId: string) {
+  return prisma.enrollment.findMany({
+    where: { userId },
+    include: { kelas: { ...kelasByMahasiswaArgs } },
+    orderBy: { joinedAt: "asc" },
+  })
+}
+
+export async function getActiveMahasiswaKelas(userId: string) {
+  const cookieStore = await cookies()
+  const activeId = cookieStore.get("activeMahasiswaKelasId")?.value
+
+  const enrollments = await getAllKelasByMahasiswa(userId)
+  if (enrollments.length === 0) return null
+
+  if (activeId) {
+    const found = enrollments.find((e) => e.kelas.id === activeId)
+    if (found) return found
+  }
+  return enrollments[0]
 }
 
 export async function getSubmissionByMahasiswa(tahapId: string, userId: string) {
