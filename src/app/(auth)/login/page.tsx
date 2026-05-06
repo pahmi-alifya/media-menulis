@@ -11,8 +11,13 @@ export default function LoginPage() {
         style={{ background: "var(--sidebar)" }}
       >
         <div className="flex items-center gap-2.5">
-          <Image src="/logo.png" alt="Media Menulis" width={36} height={36} className="rounded-xl" />
-          <span className="font-bold text-white text-lg">Media Menulis</span>
+          <Image
+            src="/logo.png"
+            alt="Media Menulis"
+            width={200}
+            height={200}
+            className="rounded-xl"
+          />
         </div>
 
         <div className="space-y-4">
@@ -56,8 +61,13 @@ export default function LoginPage() {
         <div className="w-full max-w-sm space-y-8">
           {/* Mobile logo */}
           <div className="flex items-center gap-2 md:hidden">
-            <Image src="/logo.png" alt="Media Menulis" width={32} height={32} className="rounded-lg" />
-            <span className="font-bold text-lg">Media Menulis</span>
+            <Image
+              src="/logo.png"
+              alt="Media Menulis"
+              width={200}
+              height={200}
+              className="rounded-lg"
+            />
           </div>
 
           <div>
