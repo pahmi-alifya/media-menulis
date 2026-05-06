@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import TahapStepper from "@/components/tahap/TahapStepper"
 import { auth } from "@/auth"
-import { getKelasByMahasiswa } from "@/server/queries/kelas.queries"
+import { getActiveMahasiswaKelas } from "@/server/queries/kelas.queries"
 import { TAHAP_LABEL, TIPE_SUBMISI_LABEL } from "@/lib/mock/data"
 
 export default async function MahasiswaPertemuanPage({
@@ -20,7 +20,7 @@ export default async function MahasiswaPertemuanPage({
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
 
-  const enrollment = await getKelasByMahasiswa(session.user.id)
+  const enrollment = await getActiveMahasiswaKelas(session.user.id)
   if (!enrollment) redirect("/mahasiswa/dashboard")
 
   const tahapList = enrollment.kelas.tahaps

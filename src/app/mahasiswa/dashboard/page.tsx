@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { auth } from "@/auth"
-import { getKelasByMahasiswa } from "@/server/queries/kelas.queries"
+import { getActiveMahasiswaKelas } from "@/server/queries/kelas.queries"
 import JoinKelasForm from "@/components/mahasiswa/JoinKelasForm"
 import { buildEmbedUrl } from "@/lib/utils/url-parser"
 
 export default async function MahasiswaDashboardPage() {
   const session = await auth()
-  const enrollment = session?.user?.id ? await getKelasByMahasiswa(session.user.id) : null
+  const enrollment = session?.user?.id ? await getActiveMahasiswaKelas(session.user.id) : null
   const kelas = enrollment?.kelas ?? null
 
   return (

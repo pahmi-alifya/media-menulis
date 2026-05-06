@@ -8,7 +8,7 @@ import {
   getTahapById,
   getKontenByTahap,
   getSubmissionByMahasiswa,
-  getKelasByMahasiswa,
+  getActiveMahasiswaKelas,
 } from "@/server/queries/kelas.queries";
 import { TAHAP_LABEL } from "@/lib/mock/data";
 
@@ -27,7 +27,7 @@ export default async function MahasiswaTahapDetailPage({
 
   const [tahap, enrollment] = await Promise.all([
     getTahapById(tahapId),
-    getKelasByMahasiswa(userId),
+    getActiveMahasiswaKelas(userId),
   ]);
 
   if (!tahap || !enrollment) redirect("/mahasiswa/dashboard");
