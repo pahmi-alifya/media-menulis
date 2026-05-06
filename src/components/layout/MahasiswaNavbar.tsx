@@ -1,8 +1,9 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { GraduationCap, LayoutDashboard, LogOut, Menu, X, KeyRound } from "lucide-react"
+import { LayoutDashboard, LogOut, Menu, X, KeyRound } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -26,9 +27,7 @@ export default function MahasiswaNavbar({ userName }: MahasiswaNavbarProps) {
       <div className="max-w-5xl mx-auto flex items-center justify-between px-4 h-14">
         <div className="flex items-center gap-6">
           <Link href="/mahasiswa/dashboard" className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-              <GraduationCap className="h-4 w-4 text-white" />
-            </div>
+            <Image src="/logo.png" alt="Media Menulis" width={28} height={28} className="rounded-md" />
             <span className="font-bold text-[15px]">Media Menulis</span>
           </Link>
 

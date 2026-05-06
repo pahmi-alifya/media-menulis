@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -8,7 +9,6 @@ import {
   LogOut,
   Menu,
   X,
-  GraduationCap,
   KeyRound,
   BookOpen,
 } from "lucide-react";
@@ -24,23 +24,28 @@ const navItems = [
   { href: "/dosen/mahasiswa", label: "Mahasiswa", icon: Users },
 ];
 
-function NavContent({ onClose, userName }: { onClose?: () => void; userName: string }) {
+function NavContent({
+  onClose,
+  userName,
+}: {
+  onClose?: () => void;
+  userName: string;
+}) {
   const pathname = usePathname();
 
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/10">
-        <div className="w-8 h-8 rounded-lg bg-indigo-400/20 flex items-center justify-center shrink-0">
-          <GraduationCap className="h-5 w-5 text-indigo-200" />
-        </div>
-        <div>
-          <span className="font-bold text-white text-[15px] leading-tight block">
-            Media Menulis
-          </span>
-          <span className="text-indigo-300/70 text-[11px]">
-            LMS Menulis Esai
-          </span>
+      <div className="flex flex-col items-center px-5 py-6 border-b border-white/10 gap-2.5">
+        <Image
+          src="/logo.png"
+          alt="Media Menulis"
+          width={164}
+          height={164}
+          className="rounded-2xl"
+        />
+        <div className="text-center">
+          <span className="text-indigo-300/70 text-sm">LMS Menulis Esai</span>
         </div>
       </div>
 
@@ -141,7 +146,13 @@ export default function DosenSidebar({ userName }: DosenSidebarProps) {
         }}
       >
         <div className="flex items-center gap-2">
-          <GraduationCap className="h-5 w-5 text-indigo-300" />
+          <Image
+            src="/logo.png"
+            alt="Media Menulis"
+            width={20}
+            height={20}
+            className="rounded"
+          />
           <span className="font-semibold text-white">Media Menulis</span>
         </div>
         <Button
@@ -169,7 +180,10 @@ export default function DosenSidebar({ userName }: DosenSidebarProps) {
             className="relative flex flex-col w-64 h-full shadow-2xl z-10"
             style={{ background: "var(--sidebar)" }}
           >
-            <NavContent userName={userName} onClose={() => setMobileOpen(false)} />
+            <NavContent
+              userName={userName}
+              onClose={() => setMobileOpen(false)}
+            />
           </aside>
         </div>
       )}

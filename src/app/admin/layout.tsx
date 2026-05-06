@@ -1,5 +1,6 @@
+import Image from "next/image"
 import { redirect } from "next/navigation"
-import { GraduationCap, LogOut } from "lucide-react"
+import { LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { auth } from "@/auth"
 import { makeInitials } from "@/lib/utils/forum-helpers"
@@ -16,9 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <header className="border-b bg-card/95 backdrop-blur-sm sticky top-0 z-30 shadow-sm">
         <div className="max-w-5xl mx-auto flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-              <GraduationCap className="h-4 w-4 text-white" />
-            </div>
+            <Image src="/logo.png" alt="Media Menulis" width={28} height={28} className="rounded-md" />
             <span className="font-bold text-[15px]">Media Menulis</span>
             <span className="text-xs text-muted-foreground border rounded px-1.5 py-0.5 ml-1">Admin</span>
           </div>

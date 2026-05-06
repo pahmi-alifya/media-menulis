@@ -14,6 +14,9 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "Media Menulis — LMS Perkuliahan Menulis",
   description: "Platform pembelajaran menulis esai berbasis model Knows SGM",
+  icons: {
+    icon: "/logo.png",
+  },
 }
 
 export default function RootLayout({
