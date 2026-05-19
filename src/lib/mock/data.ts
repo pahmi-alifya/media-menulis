@@ -39,23 +39,23 @@ export type AspekKolaborasi =
 export const TAHAP_LABEL: Record<TahapKode, { singkat: string; panjang: string }> = {
   SMKM: {
     singkat: "SMKM",
-    panjang: "Sharing dan Mengkonstruksi Konten Multimodal",
+    panjang: "Sosialisasi-Membangun Konteks-MultiModal",
   },
   EPM: {
     singkat: "EPM",
-    panjang: "Eksplorasi dan Penelaahan Multimodal",
+    panjang: "Eksternalisasi-Pemodelan-Multimodal",
   },
   KMBM: {
     singkat: "KMBM",
-    panjang: "Kolaborasi dan Menulis Bersama Multimodal",
+    panjang: "Kombinasi-Mengkonstruksi Bersama-Multimodal",
   },
   IMMM: {
     singkat: "IMMM",
-    panjang: "Independensi Menulis Mandiri Multimodal",
+    panjang: "Internalisasi-Mengonstruksi Mandiri-Multimodal",
   },
   IMTM: {
-    singkat: "IMTM",
-    panjang: "Integrasi dan Mempublikasikan Teks Multimodal",
+    singkat: "IMM",
+    panjang: "Internalisasi-Mengaitkan-Multimodal",
   },
 }
 
@@ -159,9 +159,9 @@ export const mockDosen: MockUser = {
 }
 
 export const mockDosenList: MockUser[] = [
-  { id: "u1",  nama: "Rina Rosdiana, M.Pd.",    email: "rina@unj.ac.id",    role: "DOSEN" },
-  { id: "ud2", nama: "Budi Hermawan, M.Hum.",    email: "budi.h@unj.ac.id",  role: "DOSEN" },
-  { id: "ud3", nama: "Dewi Kusumawati, M.Pd.",   email: "dewi.k@unj.ac.id",  role: "DOSEN" },
+  { id: "u1", nama: "Rina Rosdiana, M.Pd.", email: "rina@unj.ac.id", role: "DOSEN" },
+  { id: "ud2", nama: "Budi Hermawan, M.Hum.", email: "budi.h@unj.ac.id", role: "DOSEN" },
+  { id: "ud3", nama: "Dewi Kusumawati, M.Pd.", email: "dewi.k@unj.ac.id", role: "DOSEN" },
 ]
 
 export const mockMahasiswaAktif: MockUser = {
@@ -899,10 +899,10 @@ export interface MockEnrollment {
 }
 
 export const mockEnrollmentList: MockEnrollment[] = [
-  { id: "e1", kelasId: "k1", userId: "u2", namaMahasiswa: "Ahmad Fauzi",    nim: "1501621001", email: "ahmad@mhs.unj.ac.id",  joinedAt: "2026-02-12", kelompok: "Kelompok A" },
-  { id: "e2", kelasId: "k1", userId: "u3", namaMahasiswa: "Budi Santoso",   nim: "1501621002", email: "budi@mhs.unj.ac.id",   joinedAt: "2026-02-12", kelompok: "Kelompok A" },
-  { id: "e3", kelasId: "k1", userId: "u4", namaMahasiswa: "Citra Lestari",  nim: "1501621003", email: "citra@mhs.unj.ac.id",  joinedAt: "2026-02-13", kelompok: "Kelompok B" },
-  { id: "e4", kelasId: "k1", userId: "u5", namaMahasiswa: "Dian Permata",   nim: "1501621004", email: "dian@mhs.unj.ac.id",   joinedAt: "2026-02-13", kelompok: "Kelompok B" },
-  { id: "e5", kelasId: "k1", userId: "u6", namaMahasiswa: "Eko Prasetyo",   nim: "1501621005", email: "eko@mhs.unj.ac.id",    joinedAt: "2026-02-14", kelompok: "Kelompok C" },
-  { id: "e6", kelasId: "k1", userId: "u7", namaMahasiswa: "Fitri Handayani",nim: null,         email: "fitri@mhs.unj.ac.id",  joinedAt: "2026-02-14", kelompok: "Kelompok C" },
+  { id: "e1", kelasId: "k1", userId: "u2", namaMahasiswa: "Ahmad Fauzi", nim: "1501621001", email: "ahmad@mhs.unj.ac.id", joinedAt: "2026-02-12", kelompok: "Kelompok A" },
+  { id: "e2", kelasId: "k1", userId: "u3", namaMahasiswa: "Budi Santoso", nim: "1501621002", email: "budi@mhs.unj.ac.id", joinedAt: "2026-02-12", kelompok: "Kelompok A" },
+  { id: "e3", kelasId: "k1", userId: "u4", namaMahasiswa: "Citra Lestari", nim: "1501621003", email: "citra@mhs.unj.ac.id", joinedAt: "2026-02-13", kelompok: "Kelompok B" },
+  { id: "e4", kelasId: "k1", userId: "u5", namaMahasiswa: "Dian Permata", nim: "1501621004", email: "dian@mhs.unj.ac.id", joinedAt: "2026-02-13", kelompok: "Kelompok B" },
+  { id: "e5", kelasId: "k1", userId: "u6", namaMahasiswa: "Eko Prasetyo", nim: "1501621005", email: "eko@mhs.unj.ac.id", joinedAt: "2026-02-14", kelompok: "Kelompok C" },
+  { id: "e6", kelasId: "k1", userId: "u7", namaMahasiswa: "Fitri Handayani", nim: null, email: "fitri@mhs.unj.ac.id", joinedAt: "2026-02-14", kelompok: "Kelompok C" },
 ]
