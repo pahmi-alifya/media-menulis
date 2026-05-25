@@ -38,7 +38,7 @@ function NavContent({
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex flex-col items-center px-5 py-6 border-b border-white/10 gap-2.5">
+      <div className="flex flex-col items-center px-5 py-6 border-b border-sidebar-border gap-2.5">
         <Image
           src="/logo.png"
           alt="Media Menulis"
@@ -47,13 +47,13 @@ function NavContent({
           className="rounded-2xl"
         />
         <div className="text-center">
-          <span className="text-indigo-300/70 text-sm">LMS Menulis Esai</span>
+          <span className="text-muted-foreground text-sm">LMS Menulis Esai</span>
         </div>
       </div>
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
-        <p className="text-indigo-400/60 text-[10px] font-semibold uppercase tracking-wider px-3 mb-2">
+        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider px-3 mb-2">
           Menu
         </p>
         {navItems.map((item) => {
@@ -68,19 +68,19 @@ function NavContent({
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                 isActive
-                  ? "bg-indigo-500/25 text-white shadow-sm"
-                  : "text-indigo-200/70 hover:bg-white/8 hover:text-indigo-100",
+                  ? "bg-primary/10 text-primary shadow-sm"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
               )}
             >
               <Icon
                 className={cn(
                   "h-4 w-4 shrink-0",
-                  isActive ? "text-indigo-300" : "text-indigo-400/60",
+                  isActive ? "text-primary" : "text-muted-foreground",
                 )}
               />
               {item.label}
               {isActive && (
-                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
               )}
             </Link>
           );
@@ -88,22 +88,22 @@ function NavContent({
       </nav>
 
       {/* User + logout */}
-      <div className="px-3 pb-4 border-t border-white/10 pt-3">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/5 mb-1">
-          <div className="w-7 h-7 rounded-full bg-indigo-400/30 flex items-center justify-center text-xs font-bold text-indigo-200 shrink-0">
+      <div className="px-3 pb-4 border-t border-sidebar-border pt-3">
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-accent/50 mb-1">
+          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
             {makeInitials(userName)}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-white leading-none truncate">
+            <p className="text-sm font-medium text-foreground leading-none truncate">
               {userName}
             </p>
-            <p className="text-xs text-indigo-300/60 mt-0.5">Dosen</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Dosen</p>
           </div>
         </div>
         <Link
           href="/dosen/akun/ganti-sandi"
           onClick={onClose}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-indigo-300/60 hover:bg-white/8 hover:text-indigo-200 transition-all"
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-all"
         >
           <KeyRound className="h-4 w-4 shrink-0" />
           Ganti Sandi
@@ -111,7 +111,7 @@ function NavContent({
         <form action={logoutAction}>
           <button
             type="submit"
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-indigo-300/60 hover:bg-white/8 hover:text-indigo-200 transition-all"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-all"
           >
             <LogOut className="h-4 w-4 shrink-0" />
             Keluar
@@ -155,12 +155,12 @@ export default function DosenSidebar({ userName }: DosenSidebarProps) {
             height={20}
             className="rounded"
           />
-          <span className="font-semibold text-white">Media Menulis</span>
+          <span className="font-semibold text-foreground">Media Menulis</span>
         </div>
         <Button
           variant="ghost"
           size="icon"
-          className="text-indigo-200 hover:bg-white/10"
+          className="text-muted-foreground hover:bg-accent"
           onClick={() => setMobileOpen((v) => !v)}
         >
           {mobileOpen ? (

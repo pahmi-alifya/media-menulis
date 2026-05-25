@@ -21,14 +21,14 @@ export default function LoginPage() {
         </div>
 
         <div className="space-y-4">
-          <h2 className="text-3xl font-bold text-white leading-snug">
+          <h2 className="text-3xl font-bold text-sidebar-foreground leading-snug">
             Platform Pembelajaran
             <br />
             Menulis Esai Ilmiah
           </h2>
-          <p className="text-indigo-200/70 text-sm leading-relaxed max-w-xs">
+          <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
             Berbasis model pedagogis{" "}
-            <strong className="text-indigo-200">Knows SGM</strong> — Knowledge
+            <strong className="text-foreground">Knows SGM</strong> — Knowledge
             Sharing, Genre-Based, dan Multimodal dari Universitas Negeri
             Jakarta.
           </p>
@@ -42,10 +42,10 @@ export default function LoginPage() {
             ].map((item) => (
               <div
                 key={item}
-                className="flex items-center gap-2.5 text-sm text-indigo-200/80"
+                className="flex items-center gap-2.5 text-sm text-muted-foreground"
               >
-                <div className="w-4 h-4 rounded-full bg-indigo-400/30 flex items-center justify-center shrink-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-300" />
+                <div className="w-4 h-4 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                 </div>
                 {item}
               </div>
@@ -53,7 +53,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-indigo-400/40 text-xs">© 2026 Media Menulis</p>
+        <p className="text-muted-foreground/50 text-xs">© 2026 Media Menulis</p>
       </div>
 
       {/* Right panel — form */}
