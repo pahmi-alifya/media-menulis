@@ -294,7 +294,7 @@ export default function SubmissionForm({
             className="gap-2"
             disabled={
               isPending ||
-              tipeSubmisi === "TEKS_LANGSUNG" ||
+              (tipeSubmisi === "TEKS_LANGSUNG" && !essayValue.trim()) ||
               ((tipeSubmisi === "LINK_SLIDE" ||
                 tipeSubmisi === "LINK_DOKUMEN" ||
                 tipeSubmisi === "LINK_VIDEO") &&
