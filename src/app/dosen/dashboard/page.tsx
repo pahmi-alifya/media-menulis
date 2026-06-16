@@ -1,23 +1,29 @@
-import { Users, BookOpen } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
-import { auth } from "@/auth"
-import { getActiveKelas } from "@/server/queries/kelas.queries"
-import BuatKelasDialog from "@/components/dosen/BuatKelasDialog"
-import PanduanMahasiswaEditor from "@/components/kelas/PanduanMahasiswaEditor"
+import { Users, BookOpen } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { auth } from "@/auth";
+import { getActiveKelas, getAppSetting } from "@/server/queries/kelas.queries";
+import { buildEmbedUrl } from "@/lib/utils/url-parser";
+import BuatKelasDialog from "@/components/dosen/BuatKelasDialog";
+import PanduanMahasiswaEditor from "@/components/kelas/PanduanMahasiswaEditor";
 
 export default async function DosenDashboardPage() {
-  const session = await auth()
-  const kelas = session?.user?.id ? await getActiveKelas(session.user.id) : null
-  const namaDosen = session?.user?.name ?? "Dosen"
+  const session = await auth();
+  const [kelas, setting] = await Promise.all([
+    session?.user?.id ? getActiveKelas(session.user.id) : Promise.resolve(null),
+    getAppSetting(),
+  ]);
+  const namaDosen = session?.user?.name ?? "Dosen";
 
-  const totalMahasiswa = kelas?._count.enrollments ?? 0
-  const tahapTerbuka = kelas?.tahaps.filter((t) => t.isUnlocked).length ?? 0
+  const totalMahasiswa = kelas?._count.enrollments ?? 0;
+  const tahapTerbuka = kelas?.tahaps.filter((t) => t.isUnlocked).length ?? 0;
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
       {/* Header */}
       <div>
-        <p className="text-sm text-muted-foreground mb-1">Selamat datang kembali</p>
+        <p className="text-sm text-muted-foreground mb-1">
+          Selamat datang kembali
+        </p>
         <h1 className="text-2xl font-bold">{namaDosen}</h1>
       </div>
 
@@ -26,15 +32,21 @@ export default async function DosenDashboardPage() {
           {/* Kelas aktif */}
           <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/30">
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-muted-foreground mb-0.5">Kelas Aktif</p>
+              <p className="text-xs text-muted-foreground mb-0.5">
+                Kelas Aktif
+              </p>
               <p className="font-semibold truncate">{kelas.nama}</p>
               {kelas.deskripsi && (
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">{kelas.deskripsi}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                  {kelas.deskripsi}
+                </p>
               )}
             </div>
             <div className="text-right shrink-0">
               <p className="text-xs text-muted-foreground mb-0.5">Kode Kelas</p>
-              <code className="font-mono font-bold text-lg tracking-widest">{kelas.kode}</code>
+              <code className="font-mono font-bold text-lg tracking-widest">
+                {kelas.kode}
+              </code>
             </div>
           </div>
 
@@ -47,7 +59,9 @@ export default async function DosenDashboardPage() {
                     <p className="text-primary-foreground/70 text-xs font-medium uppercase tracking-wide">
                       Mahasiswa
                     </p>
-                    <p className="text-3xl sm:text-4xl font-bold mt-1">{totalMahasiswa}</p>
+                    <p className="text-3xl sm:text-4xl font-bold mt-1">
+                      {totalMahasiswa}
+                    </p>
                   </div>
                   <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center">
                     <Users className="h-5 w-5" />
@@ -63,7 +77,9 @@ export default async function DosenDashboardPage() {
                     <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
                       Tahap Terbuka
                     </p>
-                    <p className="text-3xl sm:text-4xl font-bold mt-1">{tahapTerbuka}/5</p>
+                    <p className="text-3xl sm:text-4xl font-bold mt-1">
+                      {tahapTerbuka}/5
+                    </p>
                   </div>
                   <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
                     <BookOpen className="h-5 w-5 text-primary" />
@@ -74,7 +90,9 @@ export default async function DosenDashboardPage() {
           </div>
 
           {/* Panduan mahasiswa */}
-          <PanduanMahasiswaEditor initialLink={kelas.linkPanduanMahasiswa ?? null} />
+          <PanduanMahasiswaEditor
+            initialLink={kelas.linkPanduanMahasiswa ?? null}
+          />
         </>
       ) : (
         <Card className="border-dashed">
@@ -92,6 +110,28 @@ export default async function DosenDashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Panduan dosen dari admin */}
+      {setting?.linkPanduanDosen &&
+        (() => {
+          const embed = buildEmbedUrl(setting.linkPanduanDosen);
+          return (
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold">
+                Panduan Penggunaan Aplikasi
+              </h2>
+              <div className="w-full rounded-lg overflow-hidden bg-muted border min-h-87.5 md:min-h-150">
+                <iframe
+                  src={embed?.embedUrl ?? setting.linkPanduanDosen}
+                  className="w-full min-h-120 md:min-h-180"
+                  sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                  allowFullScreen
+                  loading="lazy"
+                />
+              </div>
+            </div>
+          );
+        })()}
     </div>
-  )
+  );
 }
