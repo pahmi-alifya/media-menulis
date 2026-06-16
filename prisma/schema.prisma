@@ -203,6 +203,11 @@ model Forum {
   pesans       PesanForum[]
 }
 
+model Setting {
+  id               String  @id @default("global")
+  linkPanduanDosen String?
+}
+
 model PesanForum {
   id        String       @id @default(cuid())
   forumId   String
