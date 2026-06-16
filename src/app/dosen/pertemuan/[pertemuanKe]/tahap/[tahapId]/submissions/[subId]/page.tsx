@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { ArrowLeft, ExternalLink, Clock, CheckCircle2 } from "lucide-react"
+import { ArrowLeft, ExternalLink, Clock, CheckCircle2, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -111,6 +111,46 @@ export default async function DosenSubmissionDetailPage({
       </Card>
 
       <Separator />
+
+      {isIMMM && submission.peerReviews.length > 0 && (
+        <>
+          <div className="space-y-3">
+            <h2 className="font-semibold flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Peer Review ({submission.peerReviews.length})
+            </h2>
+            {submission.peerReviews.map((pr) => (
+              <Card key={pr.id}>
+                <CardContent className="pt-4 pb-4 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium">{pr.reviewer.nama}</p>
+                    {pr.komentar ? (
+                      <Badge variant="secondary" className="text-xs text-green-700 bg-green-50 dark:bg-green-950/30">
+                        Sudah direview
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs text-amber-600 border-amber-400">
+                        Belum direview
+                      </Badge>
+                    )}
+                  </div>
+                  {pr.komentar ? (
+                    <div
+                      className="rich-editor-content text-sm text-muted-foreground bg-muted/30 rounded-md p-3 border"
+                      dangerouslySetInnerHTML={{ __html: pr.komentar }}
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
+                      Reviewer belum mengirimkan komentar.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <Separator />
+        </>
+      )}
 
       {isIMMM ? (
         <div className="space-y-4">

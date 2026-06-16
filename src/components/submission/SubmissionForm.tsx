@@ -36,6 +36,7 @@ interface SubmissionFormProps {
   tahapId: string;
   tipeSubmisi: string;
   tahapUrutan: number;
+  pertemuanKe: number;
   existingSubmission?: ExistingSubmission;
 }
 
@@ -67,6 +68,7 @@ export default function SubmissionForm({
   tahapId,
   tipeSubmisi,
   tahapUrutan,
+  pertemuanKe,
   existingSubmission,
 }: SubmissionFormProps) {
   const isFinal = existingSubmission && !existingSubmission.isDraft;
@@ -94,7 +96,7 @@ export default function SubmissionForm({
       return;
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(async () => {
-      const result = await saveDraftAction(tahapId, { isiEsai: essayValue });
+      const result = await saveDraftAction(tahapId, { isiEsai: essayValue }, pertemuanKe);
       if (!result.error) {
         setSavedAt(formatTime(new Date()));
       }
@@ -109,7 +111,7 @@ export default function SubmissionForm({
       const result = await saveDraftAction(tahapId, {
         isiEsai: essayValue || null,
         linkSubmisi: linkValue || null,
-      });
+      }, pertemuanKe);
       if (result.error) {
         toast.error(result.error);
         return;
@@ -124,7 +126,7 @@ export default function SubmissionForm({
       const result = await submitTugasAction(tahapId, {
         isiEsai: essayValue || null,
         linkSubmisi: linkValue || null,
-      });
+      }, pertemuanKe);
       if (result.error) {
         toast.error(result.error);
         return;

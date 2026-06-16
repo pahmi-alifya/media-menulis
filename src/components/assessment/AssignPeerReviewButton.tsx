@@ -8,18 +8,20 @@ import { assignPeerReviewAction } from "@/server/actions/peer-review.actions";
 
 interface AssignPeerReviewButtonProps {
   tahapId: string;
+  pertemuanKe: number;
   alreadyAssigned: boolean;
 }
 
 export default function AssignPeerReviewButton({
   tahapId,
+  pertemuanKe,
   alreadyAssigned,
 }: AssignPeerReviewButtonProps) {
   const [isPending, startTransition] = useTransition();
 
   function handleAssign() {
     startTransition(async () => {
-      const result = await assignPeerReviewAction(tahapId);
+      const result = await assignPeerReviewAction(tahapId, pertemuanKe);
       if (result.error) {
         toast.error(result.error);
       } else if (result?.data?.assigned === 0) {

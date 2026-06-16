@@ -52,8 +52,8 @@ export default async function NilaiMahasiswaPage({
 
   const [tahap, submission, peerReviewsReceived] = await Promise.all([
     getTahapById(tahapId),
-    getMySubmissionWithNilai(tahapId, session.user.id),
-    getPeerReviewsReceived(tahapId, session.user.id),
+    getMySubmissionWithNilai(tahapId, session.user.id, p),
+    getPeerReviewsReceived(tahapId, session.user.id, p),
   ])
 
   if (!tahap) redirect("/mahasiswa/dashboard")

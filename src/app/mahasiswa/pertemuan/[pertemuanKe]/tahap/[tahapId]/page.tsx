@@ -37,7 +37,7 @@ export default async function MahasiswaTahapDetailPage({
 
   const [kontenList, mySubmission] = await Promise.all([
     getKontenByTahap(tahapId, p),
-    getSubmissionByMahasiswa(tahapId, userId),
+    getSubmissionByMahasiswa(tahapId, userId, p),
   ]);
 
   const tahapList = enrollment.kelas.tahaps;

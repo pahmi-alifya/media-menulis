@@ -18,7 +18,7 @@ export default async function DosenPertemuanPage({
   const kelas = session?.user?.id ? await getActiveKelas(session.user.id) : null
   if (!kelas) redirect("/dosen/dashboard")
 
-  const tahapList = await getTahapsByKelas(kelas.id)
+  const tahapList = await getTahapsByKelas(kelas.id, p)
 
   return (
     <div className="p-4 sm:p-6 space-y-6">

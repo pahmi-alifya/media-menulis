@@ -62,12 +62,21 @@ export async function getActiveKelas(dosenId: string): Promise<KelasByDosen | nu
   })
 }
 
-export async function getTahapsByKelas(kelasId: string) {
+export async function getTahapsByKelas(kelasId: string, pertemuanKe?: number) {
   return prisma.tahap.findMany({
     where: { kelasId },
     orderBy: { urutan: "asc" },
     include: {
-      _count: { select: { submissions: { where: { isDraft: false } } } },
+      _count: {
+        select: {
+          submissions: {
+            where: {
+              isDraft: false,
+              ...(pertemuanKe !== undefined ? { pertemuanKe } : {}),
+            },
+          },
+        },
+      },
     },
   })
 }
@@ -135,15 +144,23 @@ export async function getActiveMahasiswaKelas(userId: string) {
   return enrollments[0]
 }
 
-export async function getSubmissionByMahasiswa(tahapId: string, userId: string) {
+export async function getSubmissionByMahasiswa(
+  tahapId: string,
+  userId: string,
+  pertemuanKe: number,
+) {
   return prisma.submission.findUnique({
-    where: { tahapId_userId: { tahapId, userId } },
+    where: { tahapId_userId_pertemuanKe: { tahapId, userId, pertemuanKe } },
   })
 }
 
-export async function getMySubmissionWithNilai(tahapId: string, userId: string) {
+export async function getMySubmissionWithNilai(
+  tahapId: string,
+  userId: string,
+  pertemuanKe: number,
+) {
   return prisma.submission.findUnique({
-    where: { tahapId_userId: { tahapId, userId } },
+    where: { tahapId_userId_pertemuanKe: { tahapId, userId, pertemuanKe } },
     include: {
       nilaiAspeks: { orderBy: { aspek: "asc" } },
       nilaiKolabs: { orderBy: { aspek: "asc" } },
@@ -151,9 +168,9 @@ export async function getMySubmissionWithNilai(tahapId: string, userId: string) 
   })
 }
 
-export async function getSubmissionsByTahap(tahapId: string) {
+export async function getSubmissionsByTahap(tahapId: string, pertemuanKe: number) {
   return prisma.submission.findMany({
-    where: { tahapId },
+    where: { tahapId, pertemuanKe },
     include: {
       user: { select: { id: true, nama: true, nim: true, email: true } },
     },
@@ -171,6 +188,10 @@ export async function getSubmissionWithNilai(submissionId: string) {
       },
       nilaiAspeks: true,
       nilaiKolabs: true,
+      peerReviews: {
+        include: { reviewer: { select: { nama: true } } },
+        orderBy: { createdAt: "asc" },
+      },
     },
   })
 }
@@ -184,11 +205,15 @@ export async function getDosenList() {
 }
 
 /** Peer review yang harus dikerjakan oleh mahasiswa (sebagai reviewer). */
-export async function getPeerReviewAsReviewer(tahapId: string, reviewerId: string) {
+export async function getPeerReviewAsReviewer(
+  tahapId: string,
+  reviewerId: string,
+  pertemuanKe: number,
+) {
   return prisma.peerReview.findFirst({
     where: {
       reviewerId,
-      submission: { tahapId },
+      submission: { tahapId, pertemuanKe },
     },
     include: {
       submission: {
@@ -200,11 +225,15 @@ export async function getPeerReviewAsReviewer(tahapId: string, reviewerId: strin
 }
 
 /** Semua peer review yang diterima mahasiswa (sebagai reviewee). */
-export async function getPeerReviewsReceived(tahapId: string, revieweeId: string) {
+export async function getPeerReviewsReceived(
+  tahapId: string,
+  revieweeId: string,
+  pertemuanKe: number,
+) {
   return prisma.peerReview.findMany({
     where: {
       revieweeId,
-      submission: { tahapId },
+      submission: { tahapId, pertemuanKe },
     },
     include: {
       reviewer: { select: { nama: true } },
@@ -213,9 +242,9 @@ export async function getPeerReviewsReceived(tahapId: string, revieweeId: string
   })
 }
 
-/** Jumlah peer review yang sudah di-assign untuk sebuah tahap. */
-export async function getPeerReviewCount(tahapId: string) {
+/** Jumlah peer review yang sudah di-assign untuk sebuah tahap dan pertemuan. */
+export async function getPeerReviewCount(tahapId: string, pertemuanKe: number) {
   return prisma.peerReview.count({
-    where: { submission: { tahapId } },
+    where: { submission: { tahapId, pertemuanKe } },
   })
 }

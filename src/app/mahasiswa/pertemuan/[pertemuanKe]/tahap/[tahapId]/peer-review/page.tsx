@@ -22,7 +22,7 @@ export default async function MahasiswaPeerReviewPage({
 
   const [tahap, peerReview] = await Promise.all([
     getTahapById(tahapId),
-    getPeerReviewAsReviewer(tahapId, session.user.id),
+    getPeerReviewAsReviewer(tahapId, session.user.id, p),
   ])
 
   if (!tahap || tahap.kode !== "IMMM") redirect(`/mahasiswa/pertemuan/${p}`)

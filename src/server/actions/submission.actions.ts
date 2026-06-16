@@ -14,6 +14,7 @@ type SubmissionData = {
 export async function saveDraftAction(
   tahapId: string,
   data: SubmissionData,
+  pertemuanKe: number,
 ): Promise<Result<{ id: string }>> {
   const session = await auth()
   if (!session?.user?.id) return { data: null, error: "Tidak terautentikasi" }
@@ -29,7 +30,7 @@ export async function saveDraftAction(
 
   // Tidak boleh edit submission yang sudah final
   const existing = await prisma.submission.findUnique({
-    where: { tahapId_userId: { tahapId, userId } },
+    where: { tahapId_userId_pertemuanKe: { tahapId, userId, pertemuanKe } },
     select: { isDraft: true },
   })
   if (existing && !existing.isDraft) {
@@ -37,8 +38,8 @@ export async function saveDraftAction(
   }
 
   const submission = await prisma.submission.upsert({
-    where: { tahapId_userId: { tahapId, userId } },
-    create: { tahapId, userId, isDraft: true, ...data },
+    where: { tahapId_userId_pertemuanKe: { tahapId, userId, pertemuanKe } },
+    create: { tahapId, userId, pertemuanKe, isDraft: true, ...data },
     update: { ...data },
     select: { id: true },
   })
@@ -49,6 +50,7 @@ export async function saveDraftAction(
 export async function submitTugasAction(
   tahapId: string,
   data: SubmissionData,
+  pertemuanKe: number,
 ): Promise<Result<{ id: string }>> {
   const session = await auth()
   if (!session?.user?.id) return { data: null, error: "Tidak terautentikasi" }
@@ -63,7 +65,7 @@ export async function submitTugasAction(
   if (!tahap.isUnlocked) return { data: null, error: "Tahap belum dibuka" }
 
   const existing = await prisma.submission.findUnique({
-    where: { tahapId_userId: { tahapId, userId } },
+    where: { tahapId_userId_pertemuanKe: { tahapId, userId, pertemuanKe } },
     select: { isDraft: true },
   })
   if (existing && !existing.isDraft) {
@@ -87,10 +89,11 @@ export async function submitTugasAction(
   }
 
   const submission = await prisma.submission.upsert({
-    where: { tahapId_userId: { tahapId, userId } },
+    where: { tahapId_userId_pertemuanKe: { tahapId, userId, pertemuanKe } },
     create: {
       tahapId,
       userId,
+      pertemuanKe,
       isDraft: false,
       submittedAt: new Date(),
       ...data,

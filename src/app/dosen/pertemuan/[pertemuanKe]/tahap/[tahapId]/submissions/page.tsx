@@ -26,8 +26,8 @@ export default async function DosenSubmissionsPage({
   if (tahap.kelas.dosenId !== session.user.id) redirect(`/dosen/pertemuan/${p}`)
 
   const [submissions, peerReviewCount] = await Promise.all([
-    getSubmissionsByTahap(tahapId),
-    tahap.kode === "IMMM" ? getPeerReviewCount(tahapId) : Promise.resolve(0),
+    getSubmissionsByTahap(tahapId, p),
+    tahap.kode === "IMMM" ? getPeerReviewCount(tahapId, p) : Promise.resolve(0),
   ])
   const final = submissions.filter((s) => !s.isDraft)
   const draft = submissions.filter((s) => s.isDraft)
@@ -53,7 +53,7 @@ export default async function DosenSubmissionsPage({
 
         <div className="flex items-center gap-2">
           {tahap.kode === "IMMM" && final.length >= 2 && (
-            <AssignPeerReviewButton tahapId={tahap.id} alreadyAssigned={peerReviewCount > 0} />
+            <AssignPeerReviewButton tahapId={tahap.id} pertemuanKe={p} alreadyAssigned={peerReviewCount > 0} />
           )}
           {submissions.length > 0 && (
             <ExportCsvButton submissions={submissions} tahapKode={tahap.kode} />

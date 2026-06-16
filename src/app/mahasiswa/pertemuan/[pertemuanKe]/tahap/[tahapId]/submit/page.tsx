@@ -22,7 +22,7 @@ export default async function SubmitTugasPage({
 
   const [tahap, mySubmission] = await Promise.all([
     getTahapById(tahapId),
-    getSubmissionByMahasiswa(tahapId, session.user.id),
+    getSubmissionByMahasiswa(tahapId, session.user.id, p),
   ])
 
   if (!tahap) redirect("/mahasiswa/dashboard")
@@ -57,6 +57,7 @@ export default async function SubmitTugasPage({
         tahapId={tahapId}
         tipeSubmisi={tahap.tipeSubmisi}
         tahapUrutan={tahap.urutan}
+        pertemuanKe={p}
         existingSubmission={mySubmission}
       />
     </div>

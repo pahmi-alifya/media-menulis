@@ -25,7 +25,9 @@ export default async function DosenTahapDetailPage({
 
   const [initialKonten, submissionCount, allTahaps] = await Promise.all([
     getKontenByTahap(tahapId, p),
-    prisma.submission.count({ where: { tahapId, isDraft: false } }),
+    prisma.submission.count({
+      where: { tahapId, isDraft: false, pertemuanKe: p },
+    }),
     getTahapsByKelas(tahap.kelas.id),
   ]);
 
@@ -84,7 +86,8 @@ export default async function DosenTahapDetailPage({
           {hasSerahkan && (
             <Link href={`/dosen/pertemuan/${p}/tahap/${tahap.id}/submissions`}>
               <Button variant="outline" size="sm">
-                <span className="hidden sm:inline">Submissions </span>({submissionCount})
+                <span className="hidden sm:inline">Submissions </span>(
+                {submissionCount})
               </Button>
             </Link>
           )}
