@@ -142,6 +142,7 @@ model Submission {
   tahap       Tahap        @relation(fields: [tahapId], references: [id])
   userId      String
   user        User         @relation(fields: [userId], references: [id])
+  pertemuanKe Int          @default(1)
   isDraft     Boolean      @default(true)
   submittedAt DateTime?
   isiEsai     String?
@@ -153,7 +154,7 @@ model Submission {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  @@unique([tahapId, userId])
+  @@unique([tahapId, userId, pertemuanKe])
 }
 
 model NilaiAspek {
