@@ -196,6 +196,10 @@ export async function getSubmissionWithNilai(submissionId: string) {
   })
 }
 
+export async function getAppSetting() {
+  return prisma.setting.findUnique({ where: { id: "global" } })
+}
+
 export async function getDosenList() {
   return prisma.user.findMany({
     where: { role: "DOSEN" },

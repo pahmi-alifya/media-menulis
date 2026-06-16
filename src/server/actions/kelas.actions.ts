@@ -351,3 +351,20 @@ export async function duplicateKelasAction(input: {
   revalidatePath("/dosen/pertemuan/2")
   return { data: { id: newKelas.id, kode: newKelas.kode }, error: null }
 }
+
+export async function updateLinkPanduanDosenAction(link: string): Promise<Result> {
+  const session = await auth()
+  if (!session?.user?.id || session.user.role !== "ADMIN") {
+    return { data: null, error: "Akses ditolak." }
+  }
+
+  await prisma.setting.upsert({
+    where: { id: "global" },
+    create: { id: "global", linkPanduanDosen: link.trim() || null },
+    update: { linkPanduanDosen: link.trim() || null },
+  })
+
+  revalidatePath("/admin/dosen")
+  revalidatePath("/dosen/dashboard")
+  return { data: undefined, error: null }
+}
