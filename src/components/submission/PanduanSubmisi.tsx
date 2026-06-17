@@ -3,8 +3,8 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"
-import { type TipeSubmisi } from "@/lib/mock/data"
+} from "@/components/ui/accordion";
+import { type TipeSubmisi } from "@/lib/mock/data";
 
 const PANDUAN: Record<TipeSubmisi, { judul: string; langkah: string[] }> = {
   LINK_SLIDE: {
@@ -39,7 +39,7 @@ const PANDUAN: Record<TipeSubmisi, { judul: string; langkah: string[] }> = {
     judul: "Cara Menulis Esai Langsung",
     langkah: [
       "Ketik esai Anda langsung di kotak teks yang tersedia.",
-      "Esai minimal 800 kata dengan referensi minimal 3 sumber akademik.",
+      "Esai minimal 500 sampai 800 kata dengan referensi minimal 3 sumber akademik.",
       "Draf tersimpan otomatis setiap 30 detik — Anda bisa menutup halaman dan melanjutkan nanti.",
       "Klik 'Simpan Draft' untuk menyimpan manual kapan saja.",
       "Setelah selesai, klik 'Kumpulkan Tugas'. Esai yang sudah dikumpulkan tidak dapat diubah.",
@@ -53,10 +53,14 @@ const PANDUAN: Record<TipeSubmisi, { judul: string; langkah: string[] }> = {
       "Klik 'Kumpulkan Tugas' setelah siap.",
     ],
   },
-}
+};
 
-export default function PanduanSubmisi({ tipeSubmisi }: { tipeSubmisi: TipeSubmisi }) {
-  const panduan = PANDUAN[tipeSubmisi]
+export default function PanduanSubmisi({
+  tipeSubmisi,
+}: {
+  tipeSubmisi: TipeSubmisi;
+}) {
+  const panduan = PANDUAN[tipeSubmisi];
 
   return (
     <Accordion>
@@ -73,5 +77,5 @@ export default function PanduanSubmisi({ tipeSubmisi }: { tipeSubmisi: TipeSubmi
         </AccordionContent>
       </AccordionItem>
     </Accordion>
-  )
+  );
 }
